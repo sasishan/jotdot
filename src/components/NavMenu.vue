@@ -1,5 +1,5 @@
 <template>
-  <b-navbar toggleable="xl" type="light" variant="light" fixed="top">
+  <b-navbar toggleable="xl" type="dark" variant="dark" fixed="top">
     <b-navbar-brand href="#">
     <font-awesome-icon size="sm" icon="arrow-circle-right" :style="{ color: 'grey' }"  />
     	{{getAppName()}}
