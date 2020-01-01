@@ -1,0 +1,793 @@
+<template>
+  <div >
+    <span :style="upIndent" v-if="getSectionsLength>0 && allowEdit==true" >
+        <Notes_Up @updown-click="openCloseSection" :open="getOpenState" />        
+    </span>  
+     <span :style="menuIndent" v-if="allowEdit==true">
+      <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
+    </span>    
+     <span :style="bulletIndent" v-if="allowEdit==true">
+      <Notes_Flyout @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
+    </span>
+    <div 
+        :id="getId"
+        ref="getId"         
+        v-html="getSectionText"
+        :style="sectionIndent" 
+        :contenteditable="getEditable" 
+        v-on:keyup="keyMonitor($event)"  
+        @keydown.tab.prevent 
+        @keyDown.shift.prevent
+        v-on:keydown="keyDownMonitor"
+        @focus = "focusSection"
+        @blur = "blurSection($event, section)"> 
+    </div>
+    <Notes_Section v-for="(section, index) in getSections" 
+      :section="section" 
+      :depth="depth+1" 
+      :allowEdit=allowEdit
+      :haveWritePermissions=haveWritePermissions
+      :searchText = 'searchText'
+      v-if="(getOpenState) || allowEdit==false" 
+      @save-section="emitSaveSection"
+      @special-key-pressed="emitKeyPress"
+      @section-in-focus="sectionInFocus"
+      @section-in-blur="sectionBlurred"
+      @special-key-down-pressed="emitKeyDownPress"
+      />     
+  </div>
+</template>
+
+<script>
+import Vue from 'vue'
+import Notes_Flyout from '.././components/Notes_Flyout'
+import Notes_Up from '.././components/Notes_Up'
+import Notes_Menu from '.././components/Notes_Menu'
+import Operations from './Operations.vue';
+import Common from '../Common.js';
+import { Auth } from 'aws-amplify';
+const axios = require('axios')
+
+function getCaretPosition(el)
+{
+  var caretOffset = 0, sel;
+  if (typeof window.getSelection !== "undefined") 
+  {
+    var range = window.getSelection().getRangeAt(0);
+    var selected = range.toString().length;
+    var preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(el);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    caretOffset = preCaretRange.toString().length - selected;
+  }
+  return caretOffset;
+}
+
+function SetCaretPositionSpace(el) 
+{
+  var range = document.createRange();
+  var sel = window.getSelection();
+  
+  var tagText = sel.focusNode.wholeText;
+  var tags = tagText.split(" ");
+
+  if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
+  {
+    console.log('changing');
+    var hashTagText = sel.anchorNode.parentNode;
+    var tagContent = sel.anchorNode.parentNode.parentNode;
+    var newSpan = document.createElement('span');
+    newSpan.className = Common.HashTagTextClass;
+    newSpan.innerHTML = tags[0];
+    // newSpan.outerHTML = "<span class='hashTagText'>"+tags[0]+"</span> ";
+    // hashTagText.outerHTML = "<span class='hashTagText'>"+tags[0]+"</span> ";
+    // console.log('newspan', newSpan.outerHTML);
+
+    tagContent.replaceChild(newSpan, hashTagText);
+    if (tags.length>1)
+    {
+      console.log('tag2');
+      tagContent.after(" "+tags[1]);  
+    }
+    else if (!tagContent.nextSibling)
+    {
+      console.log('no tag');
+      tagContent.after("\u200B");
+      // tagContent.nextSibling.after(" ");
+      console.log('next sibling', tagContent.nextSibling);
+      // tagContent.nextSibling.after(" ");
+    }
+    else
+    {
+      tagContent.after(" ");
+    }
+
+    // var range = document.createRange();
+    // var sel = window.getSelection();
+
+    // range.setStart(newSpan, 1);
+    range.setStart(tagContent.nextSibling, 1);
+    // range.collapse(false);  
+    
+    sel.removeAllRanges();
+    sel.addRange(range);
+    el.focus();      
+
+    var next = tagContent.nextSibling;
+    // tagContent.appendChild(newSpan);
+    // parentNode.after("A");
+    // parentNode.insertAfter('&nbsp;', el);
+  }
+}
+
+//From https://stackoverflow.com/questions/512528/set-keyboard-caret-position-in-html-textbox
+// function setCaretPosition(elem, caretPos) {
+//     var range;
+
+//     if (elem.createTextRange) {
+//         range = elem.createTextRange();
+//         range.move('character', caretPos);
+//         range.select();
+//     } else {
+//         elem.focus();
+//         if (elem.selectionStart !== undefined) {
+//             elem.setSelectionRange(caretPos, caretPos);
+//         }
+//     }
+// }
+
+// function setCaretPosition(el, caretPos) 
+// {
+//   var range = document.createRange();
+//   var sel = window.getSelection();
+//   range.setStart(el.childNodes[0], caretPos);
+//   range.collapse(true);
+//   sel.removeAllRanges();
+//   sel.addRange(range);
+//   el.focus();  
+
+// }
+
+
+
+export default 
+{
+  name: 'Notes_Section',
+  props: {
+    section:{},
+    depth: 0,
+    allowEdit: {}, 
+    searchText: {},
+    haveWritePermissions:false
+  },
+  components:
+  {
+    Notes_Flyout,
+    Notes_Up,
+    Notes_Menu
+  },
+  mounted()
+  {
+    //JQUERY events to catch tags
+    var tagContent = "."+Common.TagContentClass;
+    var self = this;
+    $(tagContent).on("click", function(event)
+    {
+      // console.log($(this).text());
+      event.stopPropagation();
+      event.stopImmediatePropagation();           
+      self.$router.push({ name: 'notesbysearch', params: { query: $(this).text() }})
+      self.$store.commit('setSearchText', ($(this).text()).trim());
+    });
+
+  },
+  data: function() 
+  {
+    return { 
+      tagStarted:false,
+      poll:null,
+      lastKeyDownEvent:null,
+      htmlText:'',
+      showMenu:false,
+      sectionLeft: 50,
+      borderLeft: 0, 
+      bulletLeft: 30,
+      upBulletLeft: 10,
+      archiveBulletLeft: -20,
+      menuBulletLeft: 0,
+      indentDelta:50,
+      lineHeight:2,
+      shiftPressed: false,
+      sectionIsDeleted:false,
+      baseSectionStyle:
+      {
+        'position':'relative',
+        'text-align': 'left',
+        'line-height': '2',
+        'padding-left': '10px',
+        'border-left': '1px solid #ccc'
+        // 'left': this.sectionLeft+'px',
+      },
+      baseBorderStyle: 
+      {
+        'border-left': '1px solid #CCC', 
+        // 'margin-left': this.sectionLeft+'px',
+        // 'padding-left': '10px',
+      },
+      baseMenuBulletStyle:
+      {
+        'position':'absolute',
+        'display':'block',
+        'left': this.menuBulletLeft+'px',
+        'line-height': '2'
+      },      
+      baseUpBulletStyle:
+      {
+        'position':'absolute',
+        'display':'block',
+        'padding-left': '10px',
+        'left': this.upBulletLeft+'px',
+        'line-height': '2'
+      },
+      baseBulletStyle:
+      {
+        // 'float':'left', 
+        'position':'absolute',
+        'padding-left': '10px',
+        'display':'block',
+        // 'width':'18px',
+        'left': this.bulletLeft+'px',
+        'line-height': '2' 
+      },
+      archiveBulletStyle:
+      {
+        // 'float':'left', 
+        'position':'absolute',
+        'padding-left': '10px',
+        'display':'block',
+        // 'width':'18px',
+        'left': this.archiveBulletLeft+'px',
+        'line-height': '2'         
+      }
+
+    }
+  },
+  computed: 
+  {
+    getSectionText()
+    {
+      if (this.allowEdit)
+      {
+        if (this.inSearchMode() && this.section.searchHtml)
+        {
+          return this.section.searchHtml;
+        }
+        else
+        {
+          return this.section.html;  
+        }
+      }
+      else
+      {
+        return '-  ' +this.section.text;
+      }
+    },
+    getEditable()
+    {
+      if (this.haveWritePermissions==false)
+      {
+        return "false";
+      }
+
+      if (this.allowEdit==true)
+      {
+        return "true";
+      }
+      else
+      {
+        return "false";
+      }
+    },
+    getOpenState()
+    {
+      this.checkIfIncludesSearchText(this.section);  
+
+      if (this.inSearchMode())
+      {
+        return this.section.includes;         
+      }
+      else
+      {
+        if (this.section.open==false)
+        {
+          return false;
+        }
+        else
+        {
+          return true;
+        }        
+      }
+    },
+    getId()
+    {
+      return this.section.id;
+    },    
+    getSections()
+    {
+      return this.section.sections;
+    },
+    getSectionsLength()
+    {
+      if (this.section.sections)
+      {
+        return this.section.sections.length;
+      }
+      else
+      {
+        return 0;
+      }
+    },
+    borderIndent()
+    {
+      return this.baseBorderStyle;  
+    },
+    sectionIndent()
+    {
+      this.baseSectionStyle.left=this.sectionLeft+(this.depth*this.indentDelta)+'px';
+
+      if (this.allowEdit==false)
+      {
+        this.baseSectionStyle['border-left']= '0px';
+      }      
+
+      return this.baseSectionStyle;
+    },
+    menuIndent()
+    {
+      this.baseMenuBulletStyle.left=this.menuBulletLeft+(this.depth*this.indentDelta)+'px';
+      return this.baseMenuBulletStyle;
+    },
+    archiveIndent()
+    {
+      this.archiveBulletStyle.left=this.archiveBulletLeft+(this.depth*this.indentDelta)+'px';
+      return this.archiveBulletStyle;
+    },    
+    upIndent()
+    {
+      this.baseUpBulletStyle.left=this.upBulletLeft+(this.depth*this.indentDelta)+'px';
+      return this.baseUpBulletStyle;
+    },
+    bulletIndent() 
+    {
+      this.baseBulletStyle.left=this.bulletLeft+(this.depth*this.indentDelta)+'px';
+      return this.baseBulletStyle;
+    }
+  },
+  directives: {
+    focus: {
+      // directive definition
+      inserted: function (el) 
+      {
+        el.focus()
+      }
+    }
+  },  
+  filters: {
+  },  
+  methods:
+  {
+    highlight (string, query) 
+    {
+      if (query !== '') 
+      {
+        let check = new RegExp(query, "ig");
+        return string.replace(check, function (matchedText, a, b) 
+        {
+          return (' <strong class="highlightText">' + matchedText + '</strong>');
+        });
+      } 
+      else 
+      {        
+        return string;
+      }  
+    },    
+    startPolling() 
+    {
+      const self = this;
+      if (!this.poll)
+      {
+        this.checkAndQueueDeltaChange(this);
+
+        this.poll = setInterval(function() 
+        {
+          self.checkAndQueueDeltaChange(self);
+        }, Common.DefaultTextChangePollingInMS);        
+      }
+    }, 
+    inSearchMode()
+    {
+      return (this.searchText!="");
+    },
+    checkAndQueueDeltaChange(self)
+    {
+      if (self.lastKeyDownEvent && self.section.html!=self.lastKeyDownEvent.target.innerHTML)
+      {
+        this.textChanged(self.section, self.lastKeyDownEvent.target.innerText, self.lastKeyDownEvent.target.innerHTML);
+        self.lastKeyDownEvent=null;
+      }
+      return;
+    },
+    getTags(text, separator)
+    {
+        var hashtags = text.match(Common.HashTagMatch);
+
+
+        // console.log('getTags',hashtags);
+        var tags=[];
+        if (hashtags)
+        {
+          for (var i=0; i<hashtags.length; i++)
+          {
+            var t = hashtags[i].split(separator).filter(x => x);
+            if (t.length>0)
+            {
+              // tags.concat(t);
+              tags.push(t)
+            }
+            else
+            {
+              tags.push(hashtags[i])
+            }
+          }
+        }
+        return tags;
+    },      
+    markTags(element, html, separator) 
+    {
+      var whiteSpace = "&#8203;"; 
+
+      // console.log('before',html);
+      // (?<!y)x
+      ///\s#(\S*)/g,
+      // let re = new RegExp('(?<!y)x');
+      // var re = new RegExp('/\s#(\S*)/g');
+      // html = html.replace(/\s#(\S*)/g,
+      //   " <span class='" + Common.TagContentClass + "'><span class='" +
+      //   Common.HashTagTextClass + "'>#$1</span>" + "<span class='" + Common.TagContentNubClass +  
+      //   "'></span></span>"+ whiteSpace
+      // );
+
+      // html = html.replace(/\s#(\S*)/g,
+      //   " <span class='" + Common.TagContentClass + "'><span class='" +
+      //   Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
+      html = html.replace("<br>#", "<br> #");
+
+      // console.log('mid',html);
+
+      html = html.replace(/\s#(\S*)/g,
+        " <span class='" + Common.TagContentClass + "'><span class='" +
+        Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
+
+      // console.log('after',html);
+      return html;
+    },  
+    searchTag(text)
+    {
+      console.log(text);
+    },
+    processTags(section, text, html)
+    {
+      var tags = this.getTags(text, Common.HashTag);
+      
+      return tags;
+    },   
+    textChanged(section, text, html)
+    {
+      if (!this.inSearchMode())
+      {
+        var tags = this.processTags(section, text, html);
+
+        Operations.textChangeOp(this.$store, section, text, html, tags);  
+      }
+      else
+      {
+        console.log('not saving');
+      }
+      
+    },
+    stopPolling()
+    {
+      clearInterval(this.poll);
+    },  
+    checkIfIncludesSearchText(section)
+    {
+      var includes=false;
+      var foundMatchDownstream=false;
+
+      if (this.searchText)
+      {
+        for (var i=0; i< section.sections.length; i++)
+        {
+          var s = section.sections[i];
+          // includes= this.includesSearch(section);
+          includes = this.checkIfIncludesSearchText(s);  
+          if (includes)
+          {
+            foundMatchDownstream= true;            
+          }
+          s.includes = includes;            
+        } 
+
+        if (foundMatchDownstream)
+        {
+          // console.log('foundMatchDownstream.',section.text);
+          includes=true;
+          section.includes = includes;   
+        }
+        else 
+        {
+          includes= this.includesSearch(section);
+          section.includes = includes;                  
+        }
+      }
+      else
+      {
+        includes=true;
+        section.includes = includes;
+      }
+      
+      return includes;
+    },    
+    includesSearch(section)
+    {
+      var includesSearch=false;
+      if (this.searchText && section.text)
+      {
+        includesSearch = section.text.toLowerCase().includes(this.searchText.toLowerCase());    
+        section.searchHtml=undefined;
+
+        if (includesSearch)
+        {
+          section.searchHtml = this.highlight(section.html, this.searchText);
+        }    
+      }
+
+      return includesSearch;
+    },
+    openCloseSection(event)
+    {
+      this.section.open = !this.section.open;
+      if (this.haveWritePermissions)
+      {
+        Operations.openCloseOp(this.$store, this.section, this.section.open);  
+      }
+    },
+    emitSaveSection(event)
+    {
+      this.$emit('save-section', event);
+    },
+    emitKeyPress(event,section)
+    {
+      this.$emit('special-key-pressed', event, section)
+    },
+    emitKeyDownPress(event, eventType, section)
+    {
+      this.$emit('special-key-down-pressed', event, eventType, section)
+    },    
+    resetSearchText()
+    {
+      this.$store.commit('setSearchText', "");
+    },
+    startMarking()
+    {
+      this.tagStarted=true;
+    },
+    endMarking()
+    {
+      this.tagStarted=false;
+    },    
+    keyDownMonitor(event)
+    {
+      this.resetSearchText();
+
+      if (event.key==" " && this.tagStarted)
+      {
+        // console.log('keyDownMonitor', 'tagEnded');
+        this.endMarking();
+
+        var position = getCaretPosition(event.target);
+
+        event.target.innerHTML = this.markTags(event.target, event.target.innerHTML, '#');        
+        Common.SetCaretPositionEndOfTag(event.target, position);
+
+        event.target.innerHTML +=" ";
+        Common.SetCaretPositionEndOfTag(event.target, position);
+      }
+      else if (event.key==" ")
+      {
+        // event.preventDefault();
+        // event.stopPropagation();  
+
+        // event.target.insertAdjacentHTML('beforeend', '&nbsp;');
+        var sel = window.getSelection();
+
+        if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
+        {
+
+
+        }
+        // this.markTags(event.target, event.target.innerHTML, '#'); 
+        Common.sleep(100).then(() => 
+        {
+          SetCaretPositionSpace(event.target);
+        });          
+        
+        // var position = SetCaretPositionEndOfTag(event.target);
+
+        // event.target.innerHTML +="&nbsp;";
+        // Common.SetCaretPositionEndOfTag(event.target, position);
+      }
+      else if (event.key=="#" )
+      {        
+        this.startMarking();
+      }
+      else if (event.key=="Shift" )
+      {        
+        this.shiftPressed = true;
+      }
+      else if (this.shiftPressed!=true && event.key=="Tab")
+      {
+        // console.log('tab')      
+        this.emitKeyDownPress(event, 'tab', this.section);
+      }
+      else if (this.shiftPressed && event.key=="Tab")
+      {
+        this.emitKeyDownPress(event, 'shift_tab', this.section);
+      }
+      else if (this.shiftPressed && event.key=="Enter")
+      {
+        this.emitKeyDownPress(event, 'shift_enter', this.section);
+      }      
+      else if (!this.shiftPressed && event.key=="Enter")
+      {
+        if (event) event.preventDefault();
+        if (event) event.stopPropagation();  
+      }
+      else if (event.key=="Backspace")
+      {
+        var src = event.target.innerText
+        if (src.trim()=="")
+        {
+          this.sectionIsDeleted=true;
+          this.emitKeyDownPress(event, 'backspace-blank-section', this.section);
+        }
+      }  
+    },    
+    keyMonitor(event) 
+    {  
+      this.lastKeyDownEvent = event;
+      this.startPolling();      
+      if (event.key=="Enter" && !this.shiftPressed)
+      {
+        this.emitKeyPress(event, this.section);
+      }  
+      else if (event.key=="Shift")
+      {
+        this.shiftPressed=false; 
+      }
+      else
+      {
+        this.$emit('content-key-pressed', event)
+      }
+
+      // if (this.section.html!=event.target.innerHTML)
+      // {
+      //   this.$store.commit('queueOpItem', {type: 'modifySectionText', section: this.section});        
+      // }          
+    }, 
+    blurSection(event, section) //when the section is blurred, emit an event and save the changes
+    {
+      // this.showMenu=false;
+      // console.log(event.target.id);
+      this.stopPolling();
+      self.lastKeyDownEvent=null;
+      if (event.target.id==this.section.id)
+      {
+        if (this.sectionIsDeleted==false)
+        {
+          this.saveContents(event.target);  
+        }
+        
+        this.$emit('section-in-blur', event, this.section, this.depth);
+      }
+    },
+    saveContents(target)
+    {
+        if (!this.inSearchMode())
+        {
+          this.section.text = target.innerText;
+          this.section.html = target.innerHTML;
+
+          this.section.html = this.markTags(target, this.section.html, '#');
+          this.textChanged(this.section, this.section.text, this.section.html);  
+          this.$emit('save-section');             
+        }
+    },
+    focusSection() //when the section is focused, emit an event
+    {
+      this.showMenu=true;
+      this.$emit('section-in-focus', event, this.section, this.depth)
+    },
+    sectionInFocus(event, section, depth) //when a focus signal is received, pass it up the chain
+    {
+      //percolate a section in focus up the parents
+      this.$emit('section-in-focus', event, section, depth);
+    },
+    sectionBlurred(event, section, depth)//when a blur signal is received, pass it up the chain
+    {
+      this.$emit('section-in-blur', event, section, depth)
+    },    
+    selectSection(event)
+    {      
+      this.$emit('section-selected', event, this.getId);
+    },   
+    markIncludesSearch(event, includes, section)
+    {
+      section.includes = includes;
+    },     
+  }
+}
+
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style>
+
+
+content {
+  border: 0;
+}
+
+.hidden
+{
+  display: none;
+}
+
+.bulletSection
+{
+  float:left
+}
+
+.section
+{
+  border-left:1px solid;
+}
+.section_content
+{
+  text-align: left; 
+  position: relative;
+  padding-right: 70px;
+  min-width: 498px;
+}
+
+.tagContent
+{
+  overflow-wrap: break-word;
+  position: relative;
+  user-select: text;
+}
+
+.hashTagText {
+    color: grey;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.hashTagText:hover {
+  background-color: yellow;
+}
+
+.highlightText {
+    background: yellow;
+}
+</style>
