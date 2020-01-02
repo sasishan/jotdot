@@ -13,7 +13,9 @@
     <div v-for="(jot, index) in jotsList" class="jotRecord" @click="openJot(jot)">
       <h5 class="title mb-n1">{{jot.title}}</h5>
       <span class="subtitle">{{jot.eId}}</span>
-      <span class="float-right subtitle">{{ jot.lastUpdated | moment("calendar") }}</span>
+      <span class="float-right lastUpdated-subtitle">
+        {{ jot.lastUpdated | moment("calendar") }}
+      </span>
       <hr>
     </div>       
   </span>
@@ -34,7 +36,9 @@ export default
   computed: {
     jotsList()
     {
-      return this.$store.getters.getJotsList;
+      var jotList = this.$store.getters.getJotsList;
+      jotList.sort(this.compare);
+      return jotList;
     },
     loadingMessage()
     {
@@ -48,8 +52,7 @@ export default
   async mounted()
   {
     this.$store.commit('clearStoredData');
-    await this.loadJots();
-    this.jotsLoaded=true;
+    this.jotsLoaded = await this.loadJots();
   },
   methods: 
   {
@@ -59,14 +62,22 @@ export default
     },
     async loadJots()
     {
-      await this.$store.dispatch('loadJots');
+      // await this.$store.dispatch('loadJots');
+      var url = Common.URLS.Documents;
+      var item = await Comms.get(url);
+
+      if (item)
+      {
+        this.$store.commit('initializeJots',  item);
+        return true;
+      }
+      return false;      
     },
     ///////////////////////////////
     // OPERATIONS
     ///////////////////////////////   
     async createJot()
     {
-      console.log('createjot');
       var url = Common.URLS.CreateJot;
       var newJot = await Comms.post(url, {});
 
@@ -78,7 +89,21 @@ export default
       {
         console.log(error);
       }
-    }
+    },
+    compare(a,b) 
+    {
+      if (a.lastUpdated < b.lastUpdated)
+      {
+         return 1;
+      }
+
+      if (a.lastUpdated > b.lastUpdated)
+      {
+        return -1;
+      }
+        
+      return 0;
+    }    
   },
   data() { 
     return {
@@ -99,6 +124,12 @@ export default
 .jotRecord
 {
   cursor:pointer; 
+}
+
+.lastUpdated-subtitle
+{
+  text-align: right;
+  font-size: 0.7em;
 }
 .subtitle
 {

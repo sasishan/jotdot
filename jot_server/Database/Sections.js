@@ -1,317 +1,12 @@
 var  Database  = require('../Database/Database')
+	,Permissions = require('../Database/Permissions')
 	,Helpers  = require('../Helpers')
 	,OpsConfig = require('../OperationsConfig')
 	,Objects = require('../Objects');
 
 //OPERATION PROCESSORS
-exports.updateJot = function(db, eId, data, callback)
-{
-	if (eId)
-	{
-		var jotId = Helpers.getField(data, OpsConfig.SectionFields.DocumentId, []);
 
-		if ( jotId.isValid() )
-		{
-			var documentId = jotId.getValue();
-			var requiredPermissions = new Objects.RequiredPermissions(eId, true, true);
-			validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
-			{
-				if (error)
-				{
-					return callback(error, null);
-				}
-
-				if (isPermitted==true)
-				{
-					var updateQuery = getJotUpdateQuery(data);
-
-					if ( updateQuery!=null )
-					{			
-						var findQuery = { [OpsConfig.JotFields.DocumentId]: documentId };
-
-						Database.SetFieldQuery( 
-							db, Database.Tables.Documents, findQuery, updateQuery, null, 
-							function(error, results)
-							{
-								if (error)
-								{
-									var error = Helpers.logError('Could not update', Helpers.INTERNAL_ERROR);
-									return callback(error, null);
-								}
-								
-								return callback(null, results);
-							});
-					}	
-					else
-					{
-						var error = Helpers.logError('Internal error with query. ', Helpers.INTERNAL_ERROR);
-						return callback(error, null);
-					}			
-				}
-				else
-				{
-					var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
-					return callback(error, null);
-				}
-			});				
-		}
-	}
-	else
-	{
-		console.log('Error with id');
-		return callback('Error with id', null);
-	}	
-}
-
-
-exports.getDocuments = function(db, eId, data, callback)
-{
-	if (eId)
-	{
-		getAllReadableDocuments(db, eId, function(error, docs)
-		{
-			if (error)
-			{
-				return callback(error, null);
-			}			
-
-			return callback(null, docs);
-		});
-	}
-	else
-	{
-		var error = Helpers.logError('Error with id', Helpers.INTERNAL_ERROR);
-		return callback(error, null);
-	}	
-}
-
-//APIs
-exports.createDocument = function(db, eId, data, callback)
-{
-	if (eId)
-	{
-		var orgId = '1';
-		var title='Untitled';
-		if (data.title)
-		{
-			title = data.title;
-		}
-		var newDoc= new Objects.Document(eId, orgId, title);
-		Database.InsertQuery(db, Database.Tables.Documents, newDoc, {}, function(error, results)
-		{
-			if (error)
-			{
-				console.log(error);
-				return callback(error, null);
-			}
-			return callback(null, results);
-		} );
-	}
-	else
-	{
-		console.log('Error with id');
-		return callback('Error with id', null);
-	}	
-}
-
-exports.getOneJot = function(db, eId, data, callback)
-{
-	var jotId = Helpers.getField(data, "jotId", []);
-
-	if (eId && jotId.isValid())
-	{
-		var documentId = jotId.getValue();
-		var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
-		validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
-		{
-			if (error)
-			{
-				return callback(error, null);
-			}
-
-			if (isPermitted==true)
-			{
-				permitted_getDocumentRecord(db, null, documentId, function(error, docRecord)
-				{
-					if (error || docRecord.length==0)
-					{
-						return callback(error, null);
-					}
-
-					docRecord[0] = parseJotRecord(eId, docRecord[0]);
-					return callback(null, docRecord);
-				});			
-			}
-			else
-			{
-				var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
-				return callback(error, null);
-			}
-		});		
-	}
-	else
-	{
-		var error = Helpers.logError('Error with document id', Helpers.INTERNAL_ERROR);
-		return callback(error, null);
-	}	
-}
-
-
-exports.getOneDocumentsSections = function(db, eId, data, callback)
-{
-	var docId = Helpers.getField(data, "docId", []);
-
-	if (eId && docId.isValid())
-	{
-		var documentId = docId.getValue();
-		var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
-		validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
-		{
-			if (error)
-			{
-				return callback(error, null);
-			}
-
-			if (isPermitted==true)
-			{
-				buildDocument(db, eId, documentId, function(error, document)
-				{
-					return callback(error, document);
-				});					
-			}
-			else
-			{
-				var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
-				return callback(error, null);
-			}
-		});		
-	}
-	else
-	{
-		var error = Helpers.logError('Error with document id', Helpers.INTERNAL_ERROR);
-		return callback(error, null);
-	}	
-}
-
-//Permitted change
-permitted_addSection = function(db, eId, data, callback)
-{
-	var orgId='1';
-	var documentId = Helpers.getField(data, OpsConfig.SectionFields.DocumentId, []);
-	var text = Helpers.getField(data, OpsConfig.SectionFields.Text, []);
-	var parent = Helpers.getField(data, OpsConfig.SectionFields.ParentSection, []);
-	var priorId = Helpers.getField(data, OpsConfig.SectionFields.PriorId, []);
-	
-	var sectionId = Helpers.getField(data, OpsConfig.SectionFields.SectionId, []);
-	var insertPosition = Helpers.getField(data, OpsConfig.SectionFields.Position, []);
-
-	if ( parent.isValid() && documentId.isValid() )
-	{			
-		Database.GetMaxMin(db, Database.Tables.Sections, 	
-							{ 	
-								[OpsConfig.IdFields.DocumentId] : documentId.getValue(), 
-								[OpsConfig.SectionFields.ParentSection] : parent.getValue() 
-							},
-							{ position: -1 }, 
-							function(error, results)
-		{
-			var position=0;
-			if (results.length>0)
-			{
-				position = (results[0].position+1);
-			}
-
-			var newSection={};
-			var newText = '';
-			if (text.isValid())
-			{
-				newText = text.getValue();
-			}
-
-			if (sectionId.isValid())
-			{
-				newSection= new Objects.SectionWithId(eId, orgId, documentId.getValue(), parent.getValue(), position, newText, priorId.getValue(), sectionId.getValue());
-			}
-			else
-			{
-				newSection= new Objects.Section(eId, orgId, documentId.getValue(), parent.getValue(), position, newText, priorId.getValue());
-			}
-
-			Database.InsertQuery(db, Database.Tables.Sections, newSection, {}, function(error, results)
-			{
-				if (error)
-				{
-					var error = Helpers.logError('Error in query', Helpers.INTERNAL_ERROR);
-					return callback(error, null);
-				}
-
-				if (insertPosition.isValid())
-				{
-					if (insertPosition.getValue()<=position)
-					{
-						newPosition = {
-							position: insertPosition.getValue(), 
-							parentSection: parent.getValue()
-						};
-						data[OpsConfig.MoveOperation.NewPosition] = newPosition;
-
-						exports.moveSection(db, eId, data, function(error, results)
-						{
-							if (error)
-							{
-								var error = Helpers.logError('Error in query', Helpers.INTERNAL_ERROR);
-								return callback(error, null);
-							}
-
-							return callback(null, results);
-						});
-					}
-				}			
-				else
-				{
-					return callback(null, results);
-				}
-			});				
-		});
-	}	
-	else
-	{
-		var error = Helpers.logError('Incorrect fields', Helpers.INTERNAL_ERROR);
-		return callback(error, null);
-	}		
-};
-
-permitted_getDocumentRecord = function(db, eId, documentId, callback)
-{
-	var findQuery = 
-	{
-		[OpsConfig.SectionFields.DocumentId]: documentId, 
-	};
-
-	if (eId)
-	{
-		findQuery[OpsConfig.SectionFields.EmployeeId]= eId;	
-	}
-
-	Database.GetQuery(
-		db, 
-		Database.Tables.Documents, 
-		findQuery, 
-		{}, 
-		function(error, doc)
-	{
-		if (error)
-		{
-			var error = Helpers.logError('Could not retrieve document', Helpers.INTERNAL_ERROR);
-			return callback(error, null);
-		}
-
-		// doc[0] = parseJotRecord(eId, doc[0]);
-		return callback(null, doc);	
-	});
-}
-
-exports.newSection = function(db, eId, data, callback)
+exports.Operation_newSection = function(db, eId, data, callback)
 {
 	if (eId)
 	{
@@ -323,7 +18,7 @@ exports.newSection = function(db, eId, data, callback)
 		}	
 
 		var requiredPermissions = new Objects.RequiredPermissions(eId, true, true);
-		validateDocumentPermissions(db, documentId.getValue(), requiredPermissions, function(error, isPermitted)
+		Permissions.validateDocumentPermissions(db, documentId.getValue(), requiredPermissions, function(error, isPermitted)
 		{
 			if (error)
 			{
@@ -354,7 +49,7 @@ exports.newSection = function(db, eId, data, callback)
 	}	
 }
 
-exports.deleteSection = function(db, eId, data, callback)
+exports.Operation_deleteSection = function(db, eId, data, callback)
 {
 	if (eId)
 	{
@@ -422,7 +117,7 @@ exports.deleteSection = function(db, eId, data, callback)
 	}	
 }
 
-exports.updateSection = function(db, eId, data, callback)
+exports.Operation_updateSection = function(db, eId, data, callback)
 {
 	if (eId)
 	{
@@ -436,7 +131,7 @@ exports.updateSection = function(db, eId, data, callback)
 		}	
 
 		var requiredPermissions = new Objects.RequiredPermissions(eId, true, true);
-		validateSectionLevelPermissions(db, documentId, sectionId, requiredPermissions, function(error, isPermitted)
+		Permissions.validateSectionLevelPermissions(db, documentId, sectionId, requiredPermissions, function(error, isPermitted)
 		{
 			if (error)
 			{
@@ -450,7 +145,6 @@ exports.updateSection = function(db, eId, data, callback)
 			}
 
 			var updateQuery = getUpdateQuery(data);
-			console.log(updateQuery);
 
 			if ( updateQuery!=null )
 			{			
@@ -497,7 +191,7 @@ exports.updateSection = function(db, eId, data, callback)
 }
 
 //Position and ParentSection
-exports.moveSection = function(db, eId, data, callback)
+exports.Operation_moveSection = function(db, eId, data, callback)
 {
 	if (eId)
 	{
@@ -612,6 +306,132 @@ exports.moveSection = function(db, eId, data, callback)
 	}	
 }
 
+//APIs
+exports.API_getOneDocumentsSections = function(db, eId, data, callback)
+{
+	var docId = Helpers.getField(data, OpsConfig.APIPath_JotId, []);
+
+	if (eId && docId.isValid())
+	{
+		var documentId = docId.getValue();
+		var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
+		Permissions.validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
+		{
+			if (error)
+			{
+				return callback(error, null);
+			}
+
+			if (isPermitted==true)
+			{
+				buildDocument(db, eId, documentId, function(error, document)
+				{
+					return callback(error, document);
+				});					
+			}
+			else
+			{
+				var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
+				return callback(error, null);
+			}
+		});		
+	}
+	else
+	{
+		var error = Helpers.logError('Error with document id', Helpers.INTERNAL_ERROR);
+		return callback(error, null);
+	}	
+}
+
+//Permitted change
+permitted_addSection = function(db, eId, data, callback)
+{
+	var orgId='1';
+	var documentId = Helpers.getField(data, OpsConfig.SectionFields.DocumentId, []);
+	var text = Helpers.getField(data, OpsConfig.SectionFields.Text, []);
+	var parent = Helpers.getField(data, OpsConfig.SectionFields.ParentSection, []);
+	var priorId = Helpers.getField(data, OpsConfig.SectionFields.PriorId, []);
+	
+	var sectionId = Helpers.getField(data, OpsConfig.SectionFields.SectionId, []);
+	var insertPosition = Helpers.getField(data, OpsConfig.SectionFields.Position, []);
+
+	if ( parent.isValid() && documentId.isValid() )
+	{			
+		Database.GetMaxMin(db, Database.Tables.Sections, 	
+							{ 	
+								[OpsConfig.IdFields.DocumentId] : documentId.getValue(), 
+								[OpsConfig.SectionFields.ParentSection] : parent.getValue() 
+							},
+							{ position: -1 }, 
+							function(error, results)
+		{
+			var position=0;
+			if (results.length>0)
+			{
+				position = (results[0].position+1);
+			}
+
+			var newSection={};
+			var newText = '';
+			if (text.isValid())
+			{
+				newText = text.getValue();
+			}
+
+			if (sectionId.isValid())
+			{
+				newSection= new Objects.SectionWithId(eId, orgId, documentId.getValue(), parent.getValue(), position, newText, priorId.getValue(), sectionId.getValue());
+			}
+			else
+			{
+				newSection= new Objects.Section(eId, orgId, documentId.getValue(), parent.getValue(), position, newText, priorId.getValue());
+			}
+
+			Database.InsertQuery(db, Database.Tables.Sections, newSection, {}, function(error, results)
+			{
+				if (error)
+				{
+					var error = Helpers.logError('Error in query', Helpers.INTERNAL_ERROR);
+					return callback(error, null);
+				}
+
+				if (insertPosition.isValid())
+				{
+					if (insertPosition.getValue()<=position)
+					{
+						newPosition = {
+							position: insertPosition.getValue(), 
+							parentSection: parent.getValue()
+						};
+						data[OpsConfig.MoveOperation.NewPosition] = newPosition;
+
+						exports.Operation_moveSection(db, eId, data, function(error, results)
+						{
+							if (error)
+							{
+								var error = Helpers.logError('Error in query', Helpers.INTERNAL_ERROR);
+								return callback(error, null);
+							}
+
+							return callback(null, results);
+						});
+					}
+				}			
+				else
+				{
+					return callback(null, results);
+				}
+			});				
+		});
+	}	
+	else
+	{
+		var error = Helpers.logError('Incorrect fields', Helpers.INTERNAL_ERROR);
+		return callback(error, null);
+	}		
+};
+
+
 //HELPERS
 //Pull all the sections for the document, build out the children and order them correctly
 buildDocument = function(db, eId, documentId, callback)
@@ -634,7 +454,10 @@ buildDocument = function(db, eId, documentId, callback)
             }
         }
         , 
-        { $match: {"documentId": documentId, "eId": eId, parentSection: "-1" } }
+        { $match: {
+        	"documentId": documentId, 
+        	"eId": eId, 
+        	[OpsConfig.SectionFields.ParentSection]: "-1" } }
 
        //  {$group:{
        //          _id:"$_id", 
@@ -730,25 +553,6 @@ orderSections = function(sections)
 	return;
 }
 
-getJotUpdateQuery = function(data)
-{
-	var setupValues=[];
-
-	var title = Helpers.getField(data, OpsConfig.JotFields.Title, []);
-
-	if (!title.isValid())
-	{
-		return null;
-	}
-	var setStatement = { };
-	if (title.isValid())
-	{
-		setStatement = { title: title.getValue()};
-	}
-
-	return setStatement;
-}
-
 getUpdateQuery = function(data)
 {
 	var setupValues=[];
@@ -782,27 +586,6 @@ getUpdateQuery = function(data)
 
 	return setStatement;
 }
-
-parseJotRecord = function(eId, doc)
-{
-	if (doc)
-	{
-		var permissions= new Objects.Permissions();
-		permissions.setDocumentPermissions(doc);	
-
-		var canRead =  permissions.canRead(eId);
-		var canWrite = permissions.canWrite(eId);
-		var eIdPermissions = {
-			read: canRead, 
-			write: canWrite
-		};
-		doc.permissions=eIdPermissions;		
-	}
-	
-	return doc;
-}
-
-
 
 getSection = function(db, documentId, sectionId, callback)
 {
@@ -952,181 +735,3 @@ docSectionFind = function(documentId, sectionId)
 	}
 }
 
-getAllReadableDocuments = function(db, eId, callback)
-{
-	// var permissions = permissions.read_write[eId];
-	var findQuery = 
-	{
-		'$or' : [ 
-				{ [OpsConfig.SectionFields.EmployeeId]: eId }, 
-				{ [OpsConfig.Permissions_Read]: { $in: [eId] }}
-			]
-	};
-
-	Database.GetQuery(
-		db, 
-		Database.Tables.Documents, 
-		findQuery, 
-		OpsConfig.GET_AllDocuments_Projection, 
-		function(error, docs)
-	{
-		if (error)
-		{
-			var error = Helpers.logError('Could not find document', Helpers.INTERNAL_ERROR);
-			return callback(error, null);
-		}
-		return callback(null, docs);	
-	});
-}
-
-validateHasRequiredPermissions = function(requiredPermissions, permissions)
-{
-	if (permissions && requiredPermissions.eId) 
-	{
-		var hasRequiredPermissions= true;
-
-		var eId = requiredPermissions.eId;
-		if (requiredPermissions.needRead)
-		{
-			if (permissions.canRead(eId))
-			{
-				hasRequiredPermissions=true;
-			}
-			else
-			{
-				hasRequiredPermissions=false;
-			}
-		}
-		
-		if (requiredPermissions.needWrite)
-		{
-			if (permissions.canWrite(eId))
-			{
-				hasRequiredPermissions=true;
-			}
-			else
-			{
-				hasRequiredPermissions=false;
-			}
-		}
-
-		return hasRequiredPermissions;
-	}
-	else
-	{
-		return null;
-	}
-}
-
-validateSectionLevelPermissions = function(db, documentIdObject, sectionIdObject, requiredPermissions, callback)
-{
-	//if doc level has read/write permissions then user can read/write all sections of the doc
-	//if doc level does not have read but section has read, then has requirements for read otw no
-	//if doc level does not have write but section has write, then has requirements for write otw no
-	//
-	getSection(db, documentIdObject, sectionIdObject, function(error, section)
-	{
-		//get the section to make sure we get the right document ID that cant be spoofed
-		if (error || !section)
-		{
-			console.log('ERROR validateSectionLevelPermissions ', documentIdObject, sectionIdObject, section);
-			return callback(error, null);			
-		}
-
-		validateDocumentPermissions(db, documentIdObject.getValue(), requiredPermissions, function(error, isPermittedAtDocLevel)
-		{
-			if (error)
-			{
-				return callback(error, null);
-			}
-
-			if (isPermittedAtDocLevel ||  (!section.permissions))
-			{
-				return callback(null, isPermittedAtDocLevel);
-			}
-
-			var permissions= new Objects.Permissions();
-			permissions.setDocumentPermissions(section);
-
-			var hasRequiredPermissions = validateHasRequiredPermissions(requiredPermissions, docPermissions);
-			if (hasRequiredPermissions)
-			{
-				return callback(null, hasRequiredPermissions);				
-			}
-			else
-			{
-				var error = Helpers.logError('Error with document permissions', Helpers.INTERNAL_ERROR);
-				return callback(error, null);
-			}
-
-			return callback(null, permissions);			
-		});
-
-	});
-
-
-}
-
-//requiredPermissions.needRead/needWrite
-validateDocumentPermissions=function(db, documentId, requiredPermissions, callback)
-{
-	getDocumentPermissions(db, documentId, function(error, docPermissions)
-	{
-		if (error)
-		{
-			var error = Helpers.logError('Error getting permissions', Helpers.INTERNAL_ERROR);
-			return callback(error, null);			
-		}
-
-		var hasRequiredPermissions = validateHasRequiredPermissions(requiredPermissions, docPermissions);
-		if (hasRequiredPermissions!=null)
-		{
-			return callback(null, hasRequiredPermissions);				
-		}
-		else
-		{
-			var error = Helpers.logError('Error with document permissions', Helpers.INTERNAL_ERROR);
-			return callback(error, null);
-		}
-	});
-}
-// getPermissionsNeeded = function(eId, documentId)
-// {
-
-// };
-
-// validateDocumentPermissions= function(db, eId, documentId, permissionsNeed, callback)
-// {
-// 	getDocumentRecord(db, null, documentId, function(error, docRecord)
-// 	{
-// 		if (error || docRecord.length==0)
-// 		{
-// 			return callback(error, null);
-// 		}
-// 		var permissions= new Objects.Permissions();
-
-// 		readPermissions= false;
-// 		if (permissionsNeeded.read)
-// 		{
-// 			if (docRecord.permissions.read
-// 		}
-// 		return callback(null, permissions);
-// 	});	
-// }
-
-getDocumentPermissions=function(db, documentId, callback)
-{
-	permitted_getDocumentRecord(db, null, documentId, function(error, docRecord)
-	{
-		if (error || docRecord.length==0)
-		{
-			return callback(error, null);
-		}
-
-		var permissions= new Objects.Permissions();
-		permissions.setDocumentPermissions(docRecord[0]);
-		// console.log(permissions);
-
-		return callback(null, permissions);
-	});	
-}

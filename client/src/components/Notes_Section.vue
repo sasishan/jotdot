@@ -3,24 +3,24 @@
     <span :style="upIndent" v-if="getSectionsLength>0 && allowEdit==true" >
         <Notes_Up @updown-click="openCloseSection" :open="getOpenState" />        
     </span>  
-     <span :style="menuIndent" v-if="allowEdit==true">
+     <span :style="getSectionsLength>0 ? menuIndent :  upIndent" v-if="allowEdit==true">
       <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>
     <div 
-        :id="getId"
-        ref="getId"         
-        v-html="getSectionText"
-        :style="sectionIndent" 
-        :contenteditable="getEditable" 
-        v-on:keyup="keyMonitor($event)"  
-        @keydown.tab.prevent 
-        @keyDown.shift.prevent
-        v-on:keydown="keyDownMonitor"
-        @focus = "focusSection"
-        @blur = "blurSection($event, section)"> 
+      :id="getId"
+      ref="getId"         
+      v-html="getSectionText"
+      :style="sectionIndent" 
+      :contenteditable="getEditable" 
+      v-on:keyup="keyMonitor($event)"  
+      @keydown.tab.prevent 
+      @keyDown.shift.prevent
+      v-on:keydown="keyDownMonitor"
+      @focus = "focusSection"
+      @blur = "blurSection($event, section)"> 
     </div>
     <Notes_Section v-for="(section, index) in getSections" 
       :section="section" 

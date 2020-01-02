@@ -67,11 +67,12 @@ OpsConfig.MOVE_UPSTREAM = 1;
 OpsConfig.MOVE_DOWNSTREAM = -1;
 OpsConfig.APPEND = 0;
 
+OpsConfig.APIPath_JotId = "jotId";
 OpsConfig.APIPaths=
 {
-    GET_OneJotsSections: '/api/v1/documents/:docId',
+    GET_OneJotsSections: '/api/v1/documents/:' + OpsConfig.APIPath_JotId,
     GET_AllJots:'/api/v1/documents',
-    GET_OneJot:'/api/v1/jots/:jotId',
+    GET_OneJot:'/api/v1/jots/:' + OpsConfig.APIPath_JotId,
     POST_NewJot: '/api/v1/jots',
 };
 

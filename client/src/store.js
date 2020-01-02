@@ -130,19 +130,19 @@ export const store = new Vuex.Store({
 
 	      }
 	    },	
-	    async loadJots(state, payload)
-	    {
-		  var url = Common.URLS.Documents;
-		  var item = await Comms.get(url);
+	   //  async loadJots(state, payload)
+	   //  {
+		  // var url = Common.URLS.Documents;
+		  // var item = await Comms.get(url);
 
-		  if (item)
-		  {
-			  state.commit('initializeJots',  item);
-			  return true;
-		  }
-		  return false;
+		  // if (item)
+		  // {
+			 //  state.commit('initializeJots',  item);
+			 //  return true;
+		  // }
+		  // return false;
 
-	    },	
+	   //  },	
 	    async getOneJot(state, jotId)
 	    {
 	   		if (jotId)
