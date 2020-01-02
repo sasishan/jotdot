@@ -16,7 +16,7 @@ exports.validateDocumentPermissions=function(db, documentId, requiredPermissions
 			return callback(error, null);			
 		}
 
-		var hasRequiredPermissions = validateHasRequiredPermissions(requiredPermissions, docPermissions);
+		var hasRequiredPermissions = checkHasRequiredPermissions(requiredPermissions, docPermissions);
 		if (hasRequiredPermissions!=null)
 		{
 			return callback(null, hasRequiredPermissions);				
@@ -59,7 +59,7 @@ exports.validateSectionLevelPermissions = function(db, documentIdObject, section
 			var permissions= new Objects.Permissions();
 			permissions.setDocumentPermissions(section);
 
-			var hasRequiredPermissions = validateHasRequiredPermissions(requiredPermissions, docPermissions);
+			var hasRequiredPermissions = checkHasRequiredPermissions(requiredPermissions, docPermissions);
 			if (hasRequiredPermissions)
 			{
 				return callback(null, hasRequiredPermissions);				
@@ -94,13 +94,28 @@ getDocumentPermissions=function(db, jotId, callback)
 }
 
 
-validateHasRequiredPermissions = function(requiredPermissions, permissions)
+checkHasRequiredPermissions = function(requiredPermissions, permissions)
 {
 	if (permissions && requiredPermissions.eId) 
 	{
 		var hasRequiredPermissions= true;
 
 		var eId = requiredPermissions.eId;
+
+		if (requiredPermissions.needOwnership)
+		{
+			if (permissions.isOwner(eId))
+			{
+				hasRequiredPermissions=true;
+			}
+			else
+			{
+				hasRequiredPermissions=false;
+			}
+			
+			return hasRequiredPermissions;
+		}
+
 		if (requiredPermissions.needRead)
 		{
 			if (permissions.canRead(eId))

@@ -40,6 +40,9 @@ exports.getAPIProcessor = function(apiPath)
 		case OpsConfig.APIPaths.POST_NewJot:
 			return Jots.API_createJot;
 
+		case OpsConfig.APIPaths.DELETE_OneJot:
+			return Jots.API_deleteJot;			
+
 		case OpsConfig.APIPaths.GET_OneJotsSections:
 			return Sections.API_getOneDocumentsSections;	
 

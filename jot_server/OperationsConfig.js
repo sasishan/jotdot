@@ -74,6 +74,7 @@ OpsConfig.APIPaths=
     GET_AllJots:'/api/v1/documents',
     GET_OneJot:'/api/v1/jots/:' + OpsConfig.APIPath_JotId,
     POST_NewJot: '/api/v1/jots',
+    DELETE_OneJot:'/api/v1/jots/delete/:'+ OpsConfig.APIPath_JotId,
 };
 
 OpsConfig.GET_AllDocuments_Projection= { projection: {documentId: 1, title: 1, permissions: 1, eId: 1 , created:1, lastUpdated:1, _id: 0}};

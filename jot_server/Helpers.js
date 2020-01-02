@@ -57,12 +57,19 @@ exports.Error = function(message, errorCode)
 		message: message,
 		errorCode: ErrorCodes.INTERNAL_ERROR
 	};
+	// console.log('errorcode:', errorCode); 
 
-	if (ErrorCodes[errorCode])
+	if (errorCode)
 	{
 		error.errorCode = errorCode;
 	}
 
+	return error;
+}
+
+exports.LogUnauthorizedError =function()
+{
+	var error = exports.logError('Not authorized for this request', ErrorCodes.UNAUTHORIZED);
 	return error;
 }
 

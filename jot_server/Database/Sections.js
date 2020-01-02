@@ -5,7 +5,6 @@ var  Database  = require('../Database/Database')
 	,Objects = require('../Objects');
 
 //OPERATION PROCESSORS
-
 exports.Operation_newSection = function(db, eId, data, callback)
 {
 	if (eId)
@@ -27,7 +26,7 @@ exports.Operation_newSection = function(db, eId, data, callback)
 
 			if (isPermitted!=true)
 			{
-				var error = Helpers.logError('Not authorized to write to this document', Helpers.UNAUTHORIZED);
+				var error = Helpers.LogUnauthorizedError();
 				return callback(error, null);				
 			}
 
@@ -140,7 +139,8 @@ exports.Operation_updateSection = function(db, eId, data, callback)
 
 			if (isPermitted!=true)
 			{
-				var error = Helpers.logError('Not authorized to write to this section', Helpers.UNAUTHORIZED);
+				// var error = Helpers.logError('Not authorized to write to this section', Helpers.UNAUTHORIZED);
+				var error = Helpers.LogUnauthorizedError();
 				return callback(error, null);				
 			}
 
@@ -331,7 +331,8 @@ exports.API_getOneDocumentsSections = function(db, eId, data, callback)
 			}
 			else
 			{
-				var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
+				// var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
+				var error = Helpers.LogUnauthorizedError();
 				return callback(error, null);
 			}
 		});		

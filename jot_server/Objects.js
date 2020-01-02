@@ -5,12 +5,28 @@ var Objects={};
 Objects.RequiredPermissions = function(eId, needRead, needWrite)
 {
   this.eId={};
-  this.needRead={};
-  this.needWrite={}; 
+  this.needRead=false;
+  this.needWrite=false; 
+  this.needOwnership=false;
 
   this.eId = eId;
   this.needRead = needRead;
   this.needWrite = needWrite;
+  
+  this.requireRead=function()
+  {
+    this.needRead=true;
+  }
+
+  this.requireWrite=function()
+  {
+    this.needWrite=true;
+  }
+
+  this.requireOwnership=function()
+  {
+    this.needOwnership=true;
+  }
 }
 
 Objects.Permissions = function()
@@ -58,6 +74,18 @@ Objects.Permissions = function()
   {
     this.write[eId] = true;
   };
+
+  this.isOwner = function(eId)
+  {
+    if (this.ownerEID==eId)
+    {
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
 
   this.canWrite = function(eId)
   {

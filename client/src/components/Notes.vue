@@ -9,19 +9,18 @@
   </span>
   <span v-if="isLoaded===true">
     <div class="float-right">
-      <b-button variant="outline-primary text" size="sm" v-on:click="toggleTags()" >
-        <font-awesome-icon size="sm" icon="hashtag"/>  {{hashTagSearch}}
-      </b-button>       
-      <b-button variant="outline-primary text" size="sm" v-on:click="togglePrint()" class="ml-2">
-      <font-awesome-icon size="sm" icon="print""/>  {{toggleText}}
-      </b-button>          
+      <JotsMenu 
+      @toggle-tags="toggleTags()"
+      @toggle-print="togglePrint()"
+      @delete-jot="showDeleteJotConfirm()"
+        />     
     </div>  
   </span>  
   <span v-if="isLoaded===true && showTags==false"> 
     <Notes_Breadcrumb :sectionsStack="breadCrumbs" :jot="getJot" :allowEdit=allowEdit class="mt-3"/>
     <transition name="slide-fade" mode="out-in" >
       <h4 v-if="isSwitched==true" :contenteditable=allowEdit v-html="currentMainSection.text" class="mt-2"></h4>
-      <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title"  class="mt-2" @blur="jotTitleMonitor"></h4>      
+      <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
       <h4 v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=allowEdit v-html="currentMainSection.text" class="mt-2"></h4>      
     </transition>
     <transition-group name="list" tag="p" mode="out-in" v-if="isMobile() || !allowEdit">
@@ -69,6 +68,19 @@
   <span v-if="showTags==true">
     <Notes_Tags />
   </span>
+  <div>
+    <b-modal id="confirmDelete" title="Delete Jot" 
+      @show="resetConfirmDeleteText" 
+      @ok="handleConfirmDeleteJot" 
+      @close= "handleCancelDeleteJot"
+      @cancel= "handleCancelDeleteJot"
+      okTitle="Confirm" buttonSize='sm'
+      no-stacking>
+      <span v-html="getConfirmDeleteModalText()"></span>
+      <b-form-input
+        v-model="confirmDeleteText"></b-form-input>      
+    </b-modal>
+  </div>  
   </span>
 </template>
 
@@ -80,10 +92,13 @@ import Notes_Section from '../components/Notes_Section.vue';
 import Notes_Breadcrumb from '../components/Notes_Breadcrumb.vue';
 import Notes_Add from '../components/Notes_Add.vue';
 import Operations from './Operations.vue';
+import Comms from './Comms.vue';
 import { Auth } from 'aws-amplify';
 import draggable from 'vuedraggable';
 import OpsConfig from '../OperationsConfig.js';
 import Common from '../Common.js';
+
+import JotsMenu from '../components/Jots_Menu.vue';
 
 function getCaretPosition(el)
 {
@@ -122,6 +137,7 @@ export default
       showTags: false,
       currentSectionId:null,
       error:"",
+      confirmDeleteText:""
     }
   },  
   props: {
@@ -136,7 +152,8 @@ export default
     Notes_Add,
     draggable,
     NavMenu,
-    Notes_Tags
+    Notes_Tags,
+    JotsMenu
   },
   async mounted()
   {    
@@ -246,6 +263,91 @@ export default
   },    
   methods: 
   {
+    //Modals
+    getConfirmDeleteModalText()
+    {
+      return Common.Messages.ConfirmDeleteModalText;
+    },    
+    resetConfirmDeleteText()
+    {
+      this.confirmDeleteText="";      
+    },
+    handleCancelDeleteJot()
+    {
+      this.showDeleteJotWasCancelled(Common.Messages.DeleteCancelledMessage);
+    },
+    handleConfirmDeleteJot()
+    {
+      var self = this;
+      if (this.confirmDeleteText==Common.ConfirmDeleteStatement)
+      {
+        try
+        {
+          this.deleteJot(function(error, result)
+          {
+            if (error)
+            {
+              self.showDeleteJotWasCancelled(Common.Messages.DeleteErrorMessage);
+            }
+            else
+            {
+              self.showDeleteJotWasCompleted(Common.Messages.DeleteJotConfirmMessage);
+            }
+            return;
+
+          });
+        }
+        catch(e)
+        {
+          this.showDeleteJotWasCancelled(Common.Messages.DeleteErrorMessage);
+          return;
+        }
+
+      }
+      else
+      {
+        this.showDeleteJotWasCancelled(Common.Messages.DeleteCancelledMessageNotMatching);
+        return;
+      }
+    },
+    showDeleteJotWasCancelled(message) 
+    {
+      this.$bvModal.msgBoxOk(message, {
+        title: 'Cancelled',
+        size: 'sm',
+        buttonSize: 'sm',
+        okVariant: 'success',
+        headerClass: 'border-bottom-0',
+        footerClass: 'border-top-0',
+        centered: true
+      })
+        .then(value => {
+        })
+        .catch(error => {
+          // An error occurred
+          console.log(error);
+        })
+    },     
+    showDeleteJotWasCompleted(message) 
+    {
+      this.$bvModal.msgBoxOk(message, {
+        title: 'Confirmation',
+        size: 'sm',
+        buttonSize: 'sm',
+        okVariant: 'success',
+        headerClass: 'border-bottom-0',
+        footerClass: 'border-top-0',
+        centered: true
+      })
+        .then(value => 
+        {
+          Common.GoToJots(this.$router);
+        })
+        .catch(error => {
+          // An error occurred
+          console.log(error);
+        })
+    },  
     ////////////////////////////////
     // Initialize
     ////////////////////////////////
@@ -304,14 +406,11 @@ export default
     togglePrint()
     {        
       this.allowEdit= !this.allowEdit;
-      if (this.allowEdit)
-      {
-        this.toggleText = Common.Messages.PrintMode;
-      }
-      else
-      {
-        this.toggleText =Common.Messages.EditMode;
-      }
+
+    },
+    showDeleteJotConfirm()
+    {
+      this.$bvModal.show('confirmDelete');
     },
     isMobile() 
     {
@@ -663,6 +762,12 @@ export default
           Common.setEndOfContenteditable(element); 
         });        
       }
+    },
+    deleteJot(callback)
+    {
+      var url = Common.URLS.DeleteJot + this.currentJotId;
+      Comms.delete(url, callback);
+
     },
     //Identiy which section is in focus and it's depth
     sectionInFocus(event, section, depth)

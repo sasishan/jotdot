@@ -33,6 +33,9 @@ export default
   name: 'Jots',
   props: {
   },
+  components: 
+  {
+  },  
   computed: {
     jotsList()
     {
@@ -92,12 +95,12 @@ export default
     },
     compare(a,b) 
     {
-      if (a.lastUpdated < b.lastUpdated)
+      if (a[this.compareAttribute] < b[this.compareAttribute])
       {
          return 1;
       }
 
-      if (a.lastUpdated > b.lastUpdated)
+      if (a[this.compareAttribute] > b[this.compareAttribute])
       {
         return -1;
       }
@@ -107,7 +110,8 @@ export default
   },
   data() { 
     return {
-      jotsLoaded:false
+      jotsLoaded:false,
+      compareAttribute:'lastUpdated'
     }
   }
 

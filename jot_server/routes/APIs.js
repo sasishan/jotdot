@@ -24,6 +24,7 @@ exports.receiveAPIRequest = function(req, res)
 			{
 				if (error)
 				{
+					// console.log(error);
 					Helpers.logError(error);
 					return Helpers.sendErrorResponse(res, error);			
 				}

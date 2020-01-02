@@ -75,27 +75,6 @@ var isAuthenticated = function (req, res, next)
         req.eId = response.username;
         // console.log(response);
         next();
-      // persons.getPersonProfile(req.db, personId, function(err, person)
-      // {
-      //       if (err) 
-      //       {           
-      //         console.log(err);
-      //         return res.status(401).send('Profile not found');
-      //       }       
-
-      //       req.person = person;
-      //   next();
-       // var reqestorOrgId = person.orgId;
-       //      if (req.params.orgId && personOrgId==req.params.orgId)
-       //      {
-          // req.person = person;
-          // next();
-       //      }
-       //      else
-       //      {
-       //       return res.status(401).send('Wrong org');
-       //      }
-          // req.user.email = req.headers.email;
     }); 
   }
   catch(err)
@@ -111,6 +90,7 @@ app.get(OpsConfig.APIPaths.GET_OneJotsSections, isAuthenticated, APIs.receiveAPI
 app.get(OpsConfig.APIPaths.GET_AllJots, isAuthenticated, APIs.receiveAPIRequest);
 app.get(OpsConfig.APIPaths.GET_OneJot, isAuthenticated, APIs.receiveAPIRequest);
 app.post(OpsConfig.APIPaths.POST_NewJot, isAuthenticated, APIs.receiveAPIRequest);
+app.delete(OpsConfig.APIPaths.DELETE_OneJot, isAuthenticated, APIs.receiveAPIRequest);
 // app.post('/api/v1/documents/:docId/sections/new', isAuthenticated, APIs.receiveNewSection);
 
 

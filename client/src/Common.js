@@ -25,7 +25,7 @@ Common.Fields =
     CreateDocument: 'CreateDocument',
 };
 
-
+Common.ConfirmDeleteStatement='deleteme';
 Common.Messages = 
 {
     PendingSaves: 'There is pending saves. Are you sure you want to leave?',
@@ -35,7 +35,15 @@ Common.Messages =
     NotSaved: 'not saved',
     Loading: 'Loading, please wait...', 
     TagSearch: 'Tags',
-    CouldNotLoad: "Could not load the contents of this Jot. Please check your permissions and try again."
+    DeleteJot: 'Delete Jot',
+    CouldNotLoad: "Could not load the contents of this Jot. Please check your permissions and try again.",
+    DeleteCancelledMessage:'Delete was cancelled',
+    DeleteCancelledMessageNotMatching: "Delete was cancelled as entered text did not match",
+    DeleteErrorMessage: "There was an error deleting the Jot. Please try again.",
+    DeleteJotConfirmMessage: 'Jot was deleted successfully',
+    ConfirmDeleteModalText: "<p>This option deletes this Jot record including all sections. Only the Jot owner " +
+      "can delete a complete Jot. There is no going back once deleted.</p>"+
+      "</p>Please type in <b>'"+Common.ConfirmDeleteStatement+"'</b> to confirm you want to delete this Jot, or click to cancel this action.</p>"
 }
 
 Common.URLS = 
@@ -44,6 +52,7 @@ Common.URLS =
    Documents:  urlBase+"/api/v1/documents/",
    OneJot: urlBase+"/api/v1/jots/",
    CreateJot: urlBase+"/api/v1/jots",
+   DeleteJot: urlBase+"/api/v1/jots/delete/",
 }
 
 Common.OperationTypes = 

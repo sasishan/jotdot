@@ -1,17 +1,15 @@
 <template>
   <div>
-  <b-link :to="{ name: 'jots'}" v-if="allowEdit==true">
+  <b-link :to="{ name: 'jots'}">
     All Jots
   </b-link> 
    > 
-  <b-link :to="{ name: 'jotsById', params: { jotId: jot.documentId }}" v-if="allowEdit==true">
+  <b-link :to="{ name: 'jotsById', params: { jotId: jot.documentId }}" >
     {{ jot.title  }}
   </b-link> 
-  <span v-if="allowEdit==false">Home</span>
   <span v-for="(section, index) in sectionsStack.slice().reverse()"> 
     > 
-    <b-link :to="{ name: 'sectionsById', params: { sectionId: section.id }}" v-if="allowEdit==true">{{section.text}}</b-link>
-    <span v-if="allowEdit==false">{{section.text}}</span>
+    <b-link :to="{ name: 'sectionsById', params: { sectionId: section.id }}" >{{section.text}}</b-link>
   </span>
   </div>
 </template>
