@@ -359,6 +359,12 @@ getAllReadableJots = function(db, eId, callback)
 			var error = Helpers.logError('Could not find document', Helpers.INTERNAL_ERROR);
 			return callback(error, null);
 		}
+
+		for (var i=0; i<docs.length; i++)
+		{
+			parseJotRecord(eId, docs[i]);
+		}
+
 		return callback(null, docs);	
 	});
 }

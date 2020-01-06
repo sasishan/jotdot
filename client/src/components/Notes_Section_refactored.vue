@@ -15,7 +15,7 @@
     <div 
       :id="getId"
       ref="section_text"         
-      v-html="getSectionText"
+      v-html="sectionHtml"
       :style="sectionIndent" 
       :contenteditable="true" 
       v-on:keyup="keyMonitor($event)"  
@@ -178,6 +178,7 @@ export default
   {
     //JQUERY events to catch tags
     this.setTagClick();
+    this.setModelHtml();
   },
   data: function() 
   {
@@ -189,7 +190,7 @@ export default
 
       sectionHtml:'', 
       sectionText:'',
-      
+
       showMenu:false,
       sectionLeft: 50,
       upBulletLeft: 10,
@@ -396,14 +397,22 @@ export default
       }
     }
   },  
-  filters: {
-  },  
   destroyed()
   {
     this.stopPolling();
   },
   methods:
   {
+    setModelHtml()
+    {
+      this.sectionHtml = this.section.html;
+      this.sectionText = this.section.text;
+    },
+    setSectionHTML()
+    {
+      this.section.html = this.sectionHtml;
+      this.section.text = this.sectionText;
+    },
     checkHighlightedText(event)
     {
       if (!this.selectedRange.empty)
@@ -441,7 +450,6 @@ export default
         // var txtarea = document.getElementById(textBoxScript);
 
       this.selectedRange = window.getSelection().getRangeAt(0);
-      console.log('getSelectedText',this.selectedRange);
 
       this.selectedNode = this.selectedRange.commonAncestorContainer;  
       this.selectedBeginNode = this.selectedRange.startContainer;  
@@ -600,6 +608,7 @@ export default
       {
         this.textChanged(self.section, self.$refs.section_text.innerText, self.$refs.section_text.innerHTML);
       }
+      this.setSectionHTML();
       return;
     },
     getTags(text, separator)
@@ -885,7 +894,8 @@ export default
       {
         if (this.sectionIsDeleted==false)
         {
-          this.saveContents(event.target);  
+
+          this.saveContents(event.target);            
         }
         
         this.$emit('section-in-blur', event, this.section, this.depth);
@@ -895,8 +905,10 @@ export default
     {
         if (!this.inSearchMode())
         {
-          this.section.text = target.innerText;
-          this.section.html = target.innerHTML;
+          console.log('saved');
+          // this.section.text = target.innerText;
+          // this.section.html = target.innerHTML;
+          this.setSectionHTML();
 
           this.section.html = this.markTags(target, this.section.html, '#');
           this.textChanged(this.section, this.section.text, this.section.html);  

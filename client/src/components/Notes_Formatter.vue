@@ -1,28 +1,19 @@
 <template>
   <div >  
-    <font-awesome-icon 
-    :icon="getIcon" 
-    size="xs" 
-    :style="getStyle" 
-    @mouseover="hover = true;" 
-    @mouseleave="click==false? hover = false : hover = true;"
-    @click="click = !click"/>
-
-    <ul v-if="click" class="menu" >
-      <li>Archive node</li>
-      <li>123</li>
-    </ul>
-
+    <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'bold')"><b>B</b></b-button>
+    <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'italic')"><i>I</i></b></b-button>
+    <b-button size="sm" variant="outline-primary" @click="formatText($event, 'strikeThrough')"><s>S</s></b></b-button>
   </div>
 
 </template>
 
 <script>
 import Vue from 'vue';
+import Common from '../Common.js';
 
 export default 
 {
-  name: 'Notes_Up',
+  name: 'Notes_Formatted',
   props: {
     open: true
   },
@@ -61,10 +52,20 @@ export default
   },
   methods:
   {
+    formatText(event, type)
+    {
+      this.emitFormatText(event, type);
+              event.preventDefault();
+        event.stopPropagation();       
+
+    },
+    emitFormatText(event, type)
+    {
+      this.$emit('format-text', event, type);
+    },
     clickUpDown(event)
     {      
       this.$emit('updown-click', event);
-      // this.$router.push('/notes/'+ this.sectionId);
     }     
   }
 }

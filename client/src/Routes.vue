@@ -14,7 +14,7 @@ const routes = [
     { name: 'sectionsById', path: '/jots/:jotId/:sectionId', component: Notes, meta: { requiresAuth: true }},
     { name: 'notes', path: '/notes', component: Notes, meta: { requiresAuth: true }},
     { name: 'notesById', path: '/notes/:id', component: Notes, meta: { requiresAuth: true }, params: true},
-    { name: 'notesbysearch', path: '/notes?search=:query', component: Notes, meta: { requiresAuth: true }, params: true},
+    { name: 'notesbysearch', path: '/jots/:jotId/:sectionId?search=:query', component: Notes, meta: { requiresAuth: true }, params: true},
     { name: 'signin', path: '/signin', component: SignIn},
     // { path: '/documents', component: Documents, meta: { requiresAuth: true }},
 ];

@@ -69,7 +69,8 @@
     <Notes_Tags />
   </span>
   <div>
-    <b-modal id="confirmDelete" title="Delete Jot" 
+    <b-modal id="confirmDelete" 
+      title="Delete Jot" 
       @show="resetConfirmDeleteText" 
       @ok="handleConfirmDeleteJot" 
       @close= "handleCancelDeleteJot"
@@ -77,8 +78,7 @@
       okTitle="Confirm" buttonSize='sm'
       no-stacking>
       <span v-html="getConfirmDeleteModalText()"></span>
-      <b-form-input
-        v-model="confirmDeleteText"></b-form-input>      
+      <b-form-input v-model="confirmDeleteText"></b-form-input>      
     </b-modal>
   </div>  
   </span>
@@ -97,6 +97,7 @@ import { Auth } from 'aws-amplify';
 import draggable from 'vuedraggable';
 import OpsConfig from '../OperationsConfig.js';
 import Common from '../Common.js';
+
 
 import JotsMenu from '../components/Jots_Menu.vue';
 

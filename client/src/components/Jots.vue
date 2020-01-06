@@ -11,9 +11,15 @@
     </div> 
     <br><br>
     <div v-for="(jot, index) in jotsList" class="jotRecord" @click="openJot(jot)">
-      <h5 class="title mb-n1">{{jot.title}}</h5>
+      <h5 class="title mb-n1">
+      <span class="float-right permissions-text">{{getJotPermissions(jot)}}</span>
+        {{jot.title}}         
+      </h5>
+
       <span class="subtitle">{{jot.eId}}</span>
+      
       <span class="float-right lastUpdated-subtitle">
+
         {{ jot.lastUpdated | moment("calendar") }}
       </span>
       <hr>
@@ -76,6 +82,15 @@ export default
       }
       return false;      
     },
+    getJotPermissions(jot)
+    {
+      var permissionsText="";
+      if (jot.permissions.read && !jot.permissions.write)
+      {
+        permissionsText+="read only";
+      }
+      return permissionsText;
+    },
     ///////////////////////////////
     // OPERATIONS
     ///////////////////////////////   
@@ -130,6 +145,12 @@ export default
   cursor:pointer; 
 }
 
+.permissions-text
+{
+  text-align: right;
+  font-size: 0.6em;
+  color: red;
+}
 .lastUpdated-subtitle
 {
   text-align: right;

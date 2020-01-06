@@ -150,13 +150,11 @@ Common.setEndOfContenteditable = function(contentEditableElement)
   // el.focus();  
 // }
 
-
 Common.SetCaretPositionEndOfTag = function(el, text) 
 {
   var range = document.createRange();
   var sel = window.getSelection();
 
-  console.log(el.childNodes);
   for (var i=0; i<el.childNodes.length; i++)
   {
     child = el.childNodes[i];
@@ -167,8 +165,6 @@ Common.SetCaretPositionEndOfTag = function(el, text)
       range.collapse(true);      
     }
   }
-  // range.setStart(el.childNodes[0], caretPos);
-  // range.collapse(true);
   
   sel.removeAllRanges();
   sel.addRange(range);

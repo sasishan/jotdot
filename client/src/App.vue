@@ -2,7 +2,7 @@
   <div id="app">
     <NavMenu v-if="isSignedIn" />
     <b-container>
-      <div class="col-lg-12 main mb-5">      
+      <div class="col-lg-11 main ml-5 mr-5 mb-5">      
         <router-view :key="$route.fullPath"></router-view>
       </div>
   </b-container>
@@ -14,6 +14,7 @@ import AuthHelper from './AuthHelper.vue';
 import NavMenu from './components/NavMenu.vue';
 import Sidebar from './components/Sidebar.vue';
 import Common from './Common.js';
+import Editor from '@tinymce/tinymce-vue';
 
 export default 
 {
