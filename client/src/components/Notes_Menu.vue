@@ -8,9 +8,9 @@
     @mouseleave="click==false? hover = false : hover = true;"
     @click="click = !click"/>
 
-    <ul v-if="click" class="menu" >
-      <li>Archive node</li>
-      <li>123</li>
+    <ul v-if="click" class="menu " >
+      <div @click="clickSetToPlainText" class="menuOption">Make Plain text</div>
+      <div>Archive</div>
     </ul>
 
   </div>
@@ -61,10 +61,9 @@ export default
   },
   methods:
   {
-    clickUpDown(event)
+    clickSetToPlainText(event)
     {      
-      this.$emit('updown-click', event);
-      // this.$router.push('/notes/'+ this.sectionId);
+      this.$emit('set-plain-text', event);
     }     
   }
 }
@@ -72,6 +71,16 @@ export default
 </script>
 
 <style scoped>
+.menuOption
+{
+  cursor: pointer;
+}
+
+.menuOption:hover
+{
+  color: blue;
+}
+
 .menu {
     position: absolute;
     background-color: #DAE4F0;

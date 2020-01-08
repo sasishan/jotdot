@@ -1,5 +1,6 @@
 <template>
   <div >  
+    <!--b-button size="sm" class="mr-1" variant="outline-primary" @click="formatPlainText($event)">P</b-button-->
     <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'bold')"><b>B</b></b-button>
     <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'italic')"><i>I</i></b></b-button>
     <b-button size="sm" variant="outline-primary" @click="formatText($event, 'strikeThrough')"><s>S</s></b></b-button>
@@ -52,6 +53,13 @@ export default
   },
   methods:
   {
+    formatPlainText(event)
+    {
+      this.$emit('format-plain-text', event);
+      event.preventDefault();
+      event.stopPropagation();       
+
+    },
     formatText(event, type)
     {
       this.emitFormatText(event, type);

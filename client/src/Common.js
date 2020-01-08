@@ -5,6 +5,7 @@ var urlBase = 'http://localhost:3010';
 
 Common.AppName = "JotDot";
 
+Common.DefaultDebounceTimeInMS = 5;
 Common.DefaultOpsQueuePollingInMS = 5000;
 Common.DefaultTextChangePollingInMS = 3000;
 Common.MaxBreadCrumbText = 30;
@@ -190,5 +191,16 @@ Common.InsertTextAtCursor = function(text) {
     }
 }
 
+Common.isMobile = function()
+{
+  if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) 
+  {
+    return true
+  } 
+  else 
+  {
+    return false
+  }
+}
 
 module.exports = Common;

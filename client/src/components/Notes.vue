@@ -23,34 +23,16 @@
       <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
       <h4 v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=allowEdit v-html="currentMainSection.text" class="mt-2"></h4>      
     </transition>
-    <transition-group name="list" tag="p" mode="out-in" v-if="isMobile() || !allowEdit">
-      <Notes_Section v-for="(section, index) in currentSelection" 
-        :key="index" 
-        :allowEdit=allowEdit 
-        :haveWritePermissions=haveDocWritePermissions
-        :section="section" 
-        :depth="0" 
-        :searchText='searchText'
-        v-if="isLoaded==true"
-        class="list-item"
-        @section-in-focus="sectionInFocus"
-        @section-in-blur="sectionBlurred"
-        @section-selected="sectionSelected"
-        @special-key-pressed="keyMonitor" 
-        @special-key-down-pressed="keyDownMonitor"
-        @save-section="saveSections"
-        />
-    </transition-group>
-    <draggable v-model="currentSelection" @end="dragEnd" v-if="!isMobile() && allowEdit">
+    <draggable v-model="currentSelection" @end="dragEnd" :disabled="isMobile()" >
       <transition-group name="list" tag="p" mode="out-in">
         <Notes_Section v-for="(section, index) in currentSelection" 
           :key="index" 
-          :section="section" 
-          :depth="0" 
-          v-if="isLoaded==true" 
           :allowEdit=allowEdit
           :haveWritePermissions=haveDocWritePermissions
+          :section="section" 
+          :depth="0" 
           :searchText='searchText'
+          v-if="isLoaded==true" 
           class="list-item"
           @section-in-focus="sectionInFocus"
           @section-in-blur="sectionBlurred"
@@ -61,7 +43,6 @@
           />
       </transition-group>
     </draggable>
-
     <br>
     <Notes_Add style="float:left" @add-section-click="addNewSection" v-if="haveDocWritePermissions && allowEdit && isLoaded==true" />  
   </span>
@@ -142,8 +123,7 @@ export default
     }
   },  
   props: {
-    id: String,
-    msg: String,
+    initialJotId:null,
     search: ""
   },  
   components: 
@@ -254,17 +234,19 @@ export default
       {
           return this.$store.getters.getCurrentSelection;
       },
-      // need this mutation for dragging
+      // need this mutation for fging
       set(section) 
       {
           this.$store.commit('setCurrentSelection', section);
-          this.$store.commit('setParentsCurrentSelection', section);
+          // this.$store.commit('setParentsCurrentSelection', section);
       }
     }
   },    
   methods: 
   {
+    //////////////////////////
     //Modals
+    //////////////////////////
     getConfirmDeleteModalText()
     {
       return Common.Messages.ConfirmDeleteModalText;
@@ -349,12 +331,27 @@ export default
           console.log(error);
         })
     },  
+    showDeleteJotConfirm()
+    {
+      this.$bvModal.show('confirmDelete');
+    },    
     ////////////////////////////////
-    // Initialize
+    // Initialize Component
     ////////////////////////////////
     async initializeStartingJotId()
     {
-      var jotId = this.getJotIdFromRoute();      
+      
+      var jotId=null;
+      //check if a jot id is passed in as a prop
+      if (this.initialJotId!=null)
+      {
+        jotId = this.initialJotId;
+      }
+      else
+      {
+        jotId = this.getJotIdFromRoute();     
+      }
+      
       if (jotId)
       {
         if (this.$store.getters.getCurrentJotId!=jotId)
@@ -362,7 +359,7 @@ export default
           this.$store.commit('clearStoredData');
           this.$store.commit('setCurrentJotId', jotId);
           var jot = await this.$store.dispatch('getOneJot', jotId);
-        }
+        }        
       }
       else
       {
@@ -387,7 +384,8 @@ export default
       //Set an event to check for pending events
       window.addEventListener('beforeunload', (event) => 
       {
-        if (this.$store.getters.getOpsQueue.length>0) {
+        if (this.$store.getters.getOpsQueue.length>0) 
+        {
           event.returnValue = Common.Messages.PendingSaves;
         }
       });
@@ -407,22 +405,10 @@ export default
     togglePrint()
     {        
       this.allowEdit= !this.allowEdit;
-
-    },
-    showDeleteJotConfirm()
-    {
-      this.$bvModal.show('confirmDelete');
     },
     isMobile() 
     {
-      if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) 
-      {
-        return true
-      } 
-      else 
-      {
-        return false
-      }
+      return Common.isMobile();
     },      
     ////////////////////////////////
     // Section Helpers
@@ -499,8 +485,6 @@ export default
       var prior;
       for (var i=0; i< parentSection.sections.length; i++)
       {
-        
-        // console.log('getPriorSection', prior);
         if (parentSection.sections[i].id == section.id)
         {
           if (prior && prior.id!=section.id)
@@ -594,10 +578,20 @@ export default
       this.$store.commit('setCurrentMainSection', section); 
       this.$store.commit('setCurrentSelection', section.sections); 
     },      
+    getDraggedSection(event)
+    {
+      return (this.currentSelection[event.newIndex]);
+    },  
     dragEnd(event)
     {
-      this.$store.commit('queueOpItem', {type: 'drag', section: this.section}); 
-      this.$store.commit('dragSections', {sections: this.currentSelection, oldIndex: event.oldIndex, newIndex: event.newIndex} );
+      var draggedSection = this.getDraggedSection(event);
+      var parentSection = this.getSectionById([this.currentMainSection], draggedSection.parentSection, false); 
+
+      Operations.dragSectionOp(this.$store, 
+        draggedSection, 
+        parentSection, 
+        parentSection, 
+        event.newIndex);
     },
     ////////////////////////////////
     // Save
@@ -768,7 +762,6 @@ export default
     {
       var url = Common.URLS.DeleteJot + this.currentJotId;
       Comms.delete(url, callback);
-
     },
     //Identiy which section is in focus and it's depth
     sectionInFocus(event, section, depth)

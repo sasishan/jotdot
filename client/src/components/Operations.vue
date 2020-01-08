@@ -51,6 +51,10 @@ export default
 		{
 			op = new OpsConfig.UpdateJotTitleOperation(docId, item.newTitle);
 		}
+		else if (item.type==OpsConfig.ValidClientOperations.NoOp)
+		{
+			op = new OpsConfig.NoOp();
+		}
 
 		if (op)
 		{
@@ -58,12 +62,22 @@ export default
 		}
 		
 	},		
+	dragSectionOp(store, sectionToMove, fromParent, newParent, newIndex)
+	{
+    	var operation = 
+	      	{
+	      		type: OpsConfig.ValidClientOperations.MoveSection,   
+	      		section: sectionToMove, 
+				parentSection: fromParent, 
+				position: newIndex
+			};
+		this.queueOperation(store, operation);
+	},	
 	moveSectionOps(store, sectionToMove, fromParent, newParent)
 	{
 		this.removeExistingSection(sectionToMove, fromParent);
-
+		//debounce
         Common.sleep(5).then(() => {
-          //do stuff
           this.addExistingSection(sectionToMove, newParent);
 
 	      var operation = 
@@ -152,6 +166,17 @@ export default
 			console.log(e);
 		}
 		return newSection;
+    },
+    //This is a NOOP to indicate a pending entry is being processed for the queue
+    addPlaceHolderNoOp(store)
+    {
+    	// if (store.getters.getOpsQueue.length==0)
+    	{
+    		// console.log(store.getters.getOpsQueue.length);
+    		console.log('added dummy op');
+    		this.queueOperation(store, { type: OpsConfig.ValidClientOperations.NoOp} );	
+    	}
+    	
     },
     removeSectionOp(store, sectionToRemove, fromParent)
     {      

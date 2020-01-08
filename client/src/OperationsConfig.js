@@ -21,8 +21,21 @@ OpsConfig.ValidOperationsTypes =
     DeleteSection:'DeleteSection',
     UpdateSection:'UpdateSection',
     MoveSection: 'MoveSection',
-    UpdateJot: 'UpdateJot'
+    UpdateJot: 'UpdateJot',
+    NoOp: 'NoOp'
 };
+
+OpsConfig.IgnoreOp = function(op)
+{
+    if (op.type==OpsConfig.ValidOperationsTypes.NoOp)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
 
 OpsConfig.ValidClientOperations=
 {
@@ -55,6 +68,14 @@ OpsConfig.OperationFields=
     Data: 'data',
     Timestamp: 'timestamp'
 };
+
+OpsConfig.NoOp=function(type)
+{
+    //Basic fields for all ops
+    this[OpsConfig.OperationFields.Timestamp]=new Date();
+    this[OpsConfig.OperationFields.Type]=OpsConfig.ValidOperationsTypes.NoOp;
+}
+
 
 OpsConfig.Operation=function(type, docId, sectionId)
 {

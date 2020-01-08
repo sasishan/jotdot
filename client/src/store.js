@@ -3,7 +3,9 @@ import Vuex from 'vuex'
 import { uuid } from 'vue-uuid';
 import { Auth } from 'aws-amplify';
 import Common from './Common.js';
+import OpsConfig from './OperationsConfig.js';
 import Comms from './components/Comms.vue';
+
 const axios = require('axios')
 
 Vue.use(Vuex);
@@ -114,20 +116,20 @@ export const store = new Vuex.Store({
 	      var queue = state.getters.getOpsQueue;
 	      var sendDoc=false;
 	      var url = Common.URLS.Operations;
-
+	      var result=null;
+	      
 	      while (queue.length>0)
 	      {
 	        var op = queue.pop();
-        	var result = await Comms.post(url, op);
-        	// if (result==null)
-        	// {
-        	// 	var result = await Comms.post(url, op);
-        	// }
-        	if (result==null)
-        	{
-        		console.log('There was an error applying OP ', op);
-        	}
-
+	        
+	        if (OpsConfig.IgnoreOp(op)==false)
+	        {
+	        	result = await Comms.post(url, op);
+	        	if (result==null)
+	        	{
+	        		console.log('There was an error applying OP ', op);
+	        	}
+	        }
 	      }
 	    },	
 	   //  async loadJots(state, payload)
