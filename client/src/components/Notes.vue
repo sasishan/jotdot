@@ -23,7 +23,7 @@
       <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
       <h4 v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=allowEdit v-html="currentMainSection.text" class="mt-2"></h4>      
     </transition>
-    <draggable v-model="currentSelection" @end="dragEnd" :disabled="isMobile()" >
+    <draggable v-model="currentSelection" @end="dragEnd" :disabled="isMobile()" v-bind="dragOptions()" >
       <transition-group name="list" tag="p" mode="out-in">
         <Notes_Section v-for="(section, index) in currentSelection" 
           :key="index" 
@@ -244,6 +244,10 @@ export default
   },    
   methods: 
   {
+    dragOptions()
+    {
+      return Common.DragOptions;
+    },
     //////////////////////////
     //Modals
     //////////////////////////
@@ -804,6 +808,7 @@ export default
   transform: translateY(50px);
   opacity: 0;
 }
+
 
 .list-item {  
   line-height: 2;

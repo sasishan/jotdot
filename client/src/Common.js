@@ -89,6 +89,11 @@ Common.Copy= function(from, to)
   return to;
 }
 
+Common.DragOptions = 
+{
+  dragClass: 'dragClass',
+};
+
 Common.sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 };

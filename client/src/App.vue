@@ -60,6 +60,11 @@ export default
   -moz-osx-font-smoothing: grayscale;
 }
 
+.dragClass
+{
+  border-top: 1px dashed grey;
+}
+
 .main
 {
   margin-top: 20px;

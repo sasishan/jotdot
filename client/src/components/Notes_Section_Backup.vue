@@ -1,13 +1,13 @@
 <template>
   <div >
     <span :style="getSectionsLength>0 ? formatIndent : formatNoUpIndent" v-if="showFormatMenu && allowEdit==true" >
-      <Notes_Formatter @format-text="formatText"/>        
+      <Notes_Formatter @format-text="formatText" />        
     </span>     
     <span :style="upIndent" v-if="getSectionsLength>0 && allowEdit==true" >
       <Notes_Up @updown-click="openCloseSection" :open="getOpenState" />        
     </span>  
      <span :style="getSectionsLength>0 ? menuIndent :  upIndent" v-if="allowEdit==true">
-      <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
+      <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true" @set-plain-text="convertToPlainText"/>      
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
@@ -24,9 +24,10 @@
       v-on:keydown="keyDownMonitor"
       @focus = "focusSection"
       @mouseup="getSelectedText"
-
+      @input="inputText"
       @blur = "blurSection($event, section)"> 
     </div>
+   <draggable v-model="getSections" :disabled="isMobile()" @end="dragEnd"   >
     <Notes_Section v-for="(section, index) in getSections" 
       :section="section" 
       :depth="depth+1" 
@@ -40,6 +41,7 @@
       @section-in-blur="sectionBlurred"
       @special-key-down-pressed="emitKeyDownPress"
       />     
+      </draggable>
   </div>
 </template>
 
@@ -53,7 +55,7 @@ import Operations from './Operations.vue';
 import Common from '../Common.js';
 import { Auth } from 'aws-amplify';
 import Sections_Editor from '../components/Sections_Editor.vue';
-
+import draggable from 'vuedraggable';
 
 function getCaretPosition(el)
 {
@@ -87,22 +89,18 @@ function SetCaretPositionSpace(el)
     var newSpan = document.createElement('span');
     newSpan.className = Common.HashTagTextClass;
     newSpan.innerHTML = tags[0];
-    // newSpan.outerHTML = "<span class='hashTagText'>"+tags[0]+"</span> ";
-    // hashTagText.outerHTML = "<span class='hashTagText'>"+tags[0]+"</span> ";
-    // console.log('newspan', newSpan.outerHTML);
 
     tagContent.replaceChild(newSpan, hashTagText);
     if (tags.length>1)
     {
-      console.log('tag2');
       tagContent.after(" "+tags[1]);  
     }
     else if (!tagContent.nextSibling)
     {
-      console.log('no tag');
+      // console.log('no tag');
       tagContent.after("\u200B");
       // tagContent.nextSibling.after(" ");
-      console.log('next sibling', tagContent.nextSibling);
+      // console.log('next sibling', tagContent.nextSibling);
       // tagContent.nextSibling.after(" ");
     }
     else
@@ -144,17 +142,17 @@ function SetCaretPositionSpace(el)
 //     }
 // }
 
-function setCaretPosition(el, caretPos) 
-{
-  var range = document.createRange();
-  var sel = window.getSelection();
-  range.setStart(el.childNodes[0], caretPos);
-  range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
-  el.focus();  
+// function setCaretPosition(el, caretPos) 
+// {
+//   var range = document.createRange();
+//   var sel = window.getSelection();
+//   range.setStart(el.childNodes[0], caretPos);
+//   range.collapse(true);
+//   sel.removeAllRanges();
+//   sel.addRange(range);
+//   el.focus();  
 
-}
+// }
 
 export default 
 {
@@ -172,7 +170,8 @@ export default
     Notes_Up,
     Notes_Menu,
     Sections_Editor,
-    Notes_Formatter
+    Notes_Formatter,
+    draggable,  
   },
   mounted()
   {
@@ -190,7 +189,6 @@ export default
       sectionHtml:'', 
       sectionText:'',
       
-      showMenu:false,
       sectionLeft: 50,
       upBulletLeft: 10,
       formatBulletLeft:-100,
@@ -325,9 +323,17 @@ export default
     {
       return this.section.id;
     },    
-    getSections()
+    getSections:
     {
-      return this.section.sections;
+      get() 
+      {
+          return this.section.sections;
+      },
+      // need this mutation for fging
+      set(sections) 
+      {
+          this.section.sections = sections;
+      }      
     },
     getSectionsLength()
     {
@@ -404,6 +410,10 @@ export default
   },
   methods:
   {
+    inputText()
+    { 
+      Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
+    },
     checkHighlightedText(event)
     {
       if (!this.selectedRange.empty)
@@ -437,11 +447,10 @@ export default
       this.selectedElement={};
       //this.selectedRange.commonAncestorContainer;        
     },
-    getSelectedText(event) {
-        // var txtarea = document.getElementById(textBoxScript);
-
+    getSelectedText(event) 
+    {
       this.selectedRange = window.getSelection().getRangeAt(0);
-      console.log('getSelectedText',this.selectedRange);
+      // console.log('getSelectedText',this.selectedRange);
 
       this.selectedNode = this.selectedRange.commonAncestorContainer;  
       this.selectedBeginNode = this.selectedRange.startContainer;  
@@ -496,7 +505,52 @@ export default
         //     return true;
        // }
     },    
-   formatText(event, type)
+    convertToPlainText(event)
+    {
+
+      this.$refs.section_text.innerHTML = this.$refs.section_text.innerText;
+      this.saveContents(this.$refs.section_text); 
+    },
+    formatToPlainText(event, type)
+    {
+     // console.log('formatText',type, this.selectedNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
+      this.selectText(this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
+      var start = this.selectedRange.startOffset;
+      var end = this.selectedRange.endOffset;
+      var node = this.selectedNode;
+
+      // var sel = window.getSelection();
+      console.log(sel);
+//       if (this.selectedRange.startContainer==this.selectedRange.endContainer)
+//       {
+
+//       }
+//       var text = this.selectedRange.startContainer.textContent.substring(start, end);
+// console.log(text);
+      // text = this.selectedRange.startContainer.textContent.substring(start, end));  
+
+      document.execCommand('copy' , false , null);
+      // console.log(navigator.clipboard.readText());
+      // console.log(e.clipboardData.getData('text/plain');
+
+
+      this.checkAndQueueDeltaChange(this);
+      var range = document.createRange();
+      var sel = window.getSelection();
+
+      var el = this.$refs.section_text;
+      range.collapse(true);      
+
+      sel.removeAllRanges();
+      sel.addRange(range);
+      
+      el.focus(); 
+
+
+      this.section.html= this.$refs.section_text.innerHTML;
+      this.section.text= this.$refs.section_text.innerText;
+    },
+    formatText(event, type)
     {
       // console.log('formatText',type, this.selectedNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       this.selectText(this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
@@ -591,6 +645,11 @@ export default
     },
     checkAndQueueDeltaChange(self)
     {
+      if (self.$refs.section_text==null) //during a move, this section can disappear and reappear in new position
+      {
+        return;
+      }
+
       if (self.lastKeyDownEvent && self.section.html!=self.lastKeyDownEvent.target.innerHTML) 
       {
         this.textChanged(self.section, self.lastKeyDownEvent.target.innerText, self.lastKeyDownEvent.target.innerHTML);
@@ -606,8 +665,6 @@ export default
     {
         var hashtags = text.match(Common.HashTagMatch);
 
-
-        // console.log('getTags',hashtags);
         var tags=[];
         if (hashtags)
         {
@@ -616,7 +673,6 @@ export default
             var t = hashtags[i].split(separator).filter(x => x);
             if (t.length>0)
             {
-              // tags.concat(t);
               tags.push(t)
             }
             else
@@ -672,7 +728,6 @@ export default
       if (!this.inSearchMode())
       {
         var tags = this.processTags(section, text, html);
-
         Operations.textChangeOp(this.$store, section, text, html, tags);  
       }
       else
@@ -799,14 +854,14 @@ export default
         // event.stopPropagation();  
 
         // event.target.insertAdjacentHTML('beforeend', '&nbsp;');
-        var sel = window.getSelection();
+        // var sel = window.getSelection();
 
-        if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
-        {
+        // if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
+        // {
 
 
-        }
-        // this.markTags(event.target, event.target.innerHTML, '#'); 
+        // }
+        // // this.markTags(event.target, event.target.innerHTML, '#'); 
         Common.sleep(100).then(() => 
         {
           SetCaretPositionSpace(event.target);
@@ -827,11 +882,14 @@ export default
       }
       else if (this.shiftPressed!=true && event.key=="Tab")
       {
-        // console.log('tab')      
+        //moving this section, so save the text first
+        this.saveContents(event.target);  
         this.emitKeyDownPress(event, 'tab', this.section);
       }
       else if (this.shiftPressed && event.key=="Tab")
       {
+        //moving this section, so save the text first
+        this.saveContents(event.target);
         this.emitKeyDownPress(event, 'shift_tab', this.section);
       }
       else if (this.shiftPressed && event.key=="Enter")
@@ -870,42 +928,43 @@ export default
         this.$emit('content-key-pressed', event)
       }
 
-      // if (this.section.html!=event.target.innerHTML)
-      // {
-      //   this.$store.commit('queueOpItem', {type: 'modifySectionText', section: this.section});        
-      // }          
     }, 
     blurSection(event, section) //when the section is blurred, emit an event and save the changes
     {
-      // this.showMenu=false;
-      console.log('blurred');
-      // this.stopPolling();
+      this.stopPolling();
       self.lastKeyDownEvent=null;
       if (event.target.id==this.section.id)
       {
         if (this.sectionIsDeleted==false)
         {
           this.saveContents(event.target);  
+          this.$emit('section-in-blur', event, this.section, this.depth);
         }
-        
-        this.$emit('section-in-blur', event, this.section, this.depth);
       }
+    },
+    setSectionHTML(target)
+    {
+      this.section.text = target.innerText;
+      this.section.html = target.innerHTML;
     },
     saveContents(target)
     {
-        if (!this.inSearchMode())
-        {
-          this.section.text = target.innerText;
-          this.section.html = target.innerHTML;
+      if (!this.inSearchMode())
+      {
+        this.checkAndQueueDeltaChange(this);
+        this.setSectionHTML(target);
+        this.section.html = this.markTags(target, this.section.html, '#');
+        this.$emit('save-section');   
 
-          this.section.html = this.markTags(target, this.section.html, '#');
-          this.textChanged(this.section, this.section.text, this.section.html);  
-          this.$emit('save-section');                       
-        }
+        return true;
+      }
+      else
+      {
+        return false;
+      }
     },
     focusSection() //when the section is focused, emit an event
     {
-      this.showMenu=true;
       this.$emit('section-in-focus', event, this.section, this.depth)
     },
     sectionInFocus(event, section, depth) //when a focus signal is received, pass it up the chain
@@ -938,7 +997,26 @@ export default
         self.$router.push({ name: 'notesbysearch', params: { query: $(this).text() }})
         self.$store.commit('setSearchText', ($(this).text()).trim());
       });      
-    }  
+    },
+    getDraggedSection(event)
+    {
+      return (this.section.sections[event.newIndex]);
+    },  
+    dragEnd(event)
+    {
+      var draggedSection = this.getDraggedSection(event);
+      var parentSection = this.section; 
+
+      Operations.dragSectionOp(this.$store, 
+        draggedSection, 
+        parentSection, 
+        parentSection, 
+        event.newIndex);
+    },    
+    isMobile()
+    {
+      return Common.isMobile();
+    }
   }
 }
 

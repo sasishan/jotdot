@@ -25,10 +25,9 @@
       @focus = "focusSection"
       @mouseup="getSelectedText"
       @input="inputText"
-
       @blur = "blurSection($event, section)"> 
     </div>
-   <draggable v-model="getSections" :disabled="isMobile()" @end="dragEnd"   >
+   <draggable v-model="getSections" :disabled="isMobile()" @end="dragEnd" v-bind="dragOptions()">
     <Notes_Section v-for="(section, index) in getSections" 
       :section="section" 
       :depth="depth+1" 
@@ -411,6 +410,10 @@ export default
   },
   methods:
   {
+    dragOptions()
+    {
+      return Common.DragOptions;
+    },    
     inputText()
     { 
       Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
