@@ -5,14 +5,16 @@
 </template>
 
 <script>
-import Vue from 'vue'
+import Vue from 'vue';
+import Common from '../Common.js';
 
 export default 
 {
   name: 'Notes_Flyout',
   props: {
     text: String,
-    sectionId: String
+    sectionId: String,
+    section: {}
   },
   data: function() 
   {
@@ -51,7 +53,8 @@ export default
     clickFlyout:function(event)
     {      
       // this.$emit('flyout-click', event);
-      this.$router.push({name:'sectionsById', params:{sectionId: this.sectionId}});
+      Common.GoToSection(this.section, this.$router);
+      // this.$router.push({name:'sectionsById', params:{sectionId: this.sectionId}});
     }     
   }
 }

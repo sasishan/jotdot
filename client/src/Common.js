@@ -54,6 +54,8 @@ Common.URLS =
    OneJot: urlBase+"/api/v1/jots/",
    CreateJot: urlBase+"/api/v1/jots",
    DeleteJot: urlBase+"/api/v1/jots/delete/",
+   GetTags: urlBase+"/api/v1/tags/",
+   GetTagSections: urlBase+"/api/v1/tags/sections",
 }
 
 Common.OperationTypes = 
@@ -66,6 +68,12 @@ Common.KeyEventTypes=
 {
     ShiftTab:'shift_tab',
     BackspaceBlankSection: 'backspace-blank-section',
+}
+
+
+Common.GoToSection = function(section, router)
+{
+  router.push({name:'sectionsById', params: { jotId: section.documentId, sectionId: section.id}});
 }
 
 Common.GoToJots = function(router)
@@ -92,6 +100,7 @@ Common.Copy= function(from, to)
 Common.DragOptions = 
 {
   dragClass: 'dragClass',
+  ghostClass: 'ghostClass'
 };
 
 Common.sleep = (milliseconds) => {

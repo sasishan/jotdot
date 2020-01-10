@@ -2,99 +2,25 @@ var  Database  = require('../Database/Database')
 	,Helpers  = require('../Helpers')
 	,OpsConfig = require('../OperationsConfig')
 	,Objects = require('../Objects')
+	,Jots  = require('../Database/Jots')
+	,Sections  = require('../Database/Sections')
 	,Permissions = require('../Database/Permissions');
 
 //API
-exports.API_createJot = function(db, eId, data, callback)
+exports.API_getAllTags= function(db, eId, data, callback)
 {
+	// var eId='sasishan_667@hotmail.com';
+	// console.log('API_getAllTags',eId);
 	if (eId)
 	{
-		var orgId = '1';
-		var title='Untitled';
-
-		if (data.title)
-		{
-			title = data.title;
-		}
-
-		var newJot= new Objects.Document(eId, orgId, title);
-		Database.InsertQuery(db, Database.Tables.Documents, newJot, {}, function(error, results)
-		{
-			if (error)
-			{
-				console.log(error);
-				return callback(error, null);
-			}
-			return callback(null, results);
-		} );
-	}
-	else
-	{
-		console.log('Error with id');
-		return callback('Error with id', null);
-	}	
-}
-
-exports.API_deleteJot = function(db, eId, data, callback)
-{
-	var orgId='1';
-
-	if (eId)
-	{
-		var jotId = Helpers.getField(data, OpsConfig.APIPath_JotId, []);		
-		if  (!jotId.isValid())
-		{
-			var error = Helpers.logError('Incorrect fields ' + data, Helpers.INTERNAL_ERROR);
-			return callback(error, null);
-		}	
-
-		var requiredPermissions = new Objects.RequiredPermissions(eId, true, true);
-		requiredPermissions.requireOwnership(); //only owners can delete docs
-
-		Permissions.validateDocumentPermissions(db, jotId.getValue(), requiredPermissions, function(error, isPermitted)
-		{
-			if (error)
-			{
-				return callback(error, null);
-			}
-
-			if (isPermitted!=true)
-			{
-				// var error = Helpers.logError('Not authorized to delete this document', Helpers.ErrorCodes.UNAUTHORIZED);
-				var error = Helpers.LogUnauthorizedError();
-				return callback(error, null);				
-			}
-
-			permitted_deleteJotAndSections(db, eId, jotId.getValue(), function(error, results)
-			{
-				if (error)
-				{
-					return callback(error, null);
-				}
-
-				return callback(null, results);
-			});
-		});
-	}
-	else
-	{
-		var error = Helper.logError('Error with id', Helpers.INTERNAL_ERROR);
-		return callback(error, null);
-	}		
-}
-
-exports.API_getAllJots= function(db, eId, data, callback)
-{
-	if (eId)
-	{
-		exports.getAllReadableJots(db, eId, function(error, docs)
+		getAllTagsFromReadableJots(db, eId, function(error, tags)
 		{
 			if (error)
 			{
 				return callback(error, null);
 			}			
 
-			return callback(null, docs);
+			return callback(null, tags);
 		});
 	}
 	else
@@ -104,41 +30,48 @@ exports.API_getAllJots= function(db, eId, data, callback)
 	}	
 }
 
-exports.API_getOneJot = function(db, eId, data, callback)
+exports.API_getSectionsForTag = function(db, eId, data, callback)
 {
-	var jotId = Helpers.getField(data, OpsConfig.APIPath_JotId, []);
-
-	if (eId && jotId.isValid())
+	var tag = Helpers.getField(data, OpsConfig.APIPath_TagName, []);
+	var sectionsList=[];
+	if (eId && tag.isValid())
 	{
-		var documentId = jotId.getValue();
-		var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
-		Permissions.validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
+		Sections.permitted_getSectionsByTag(db, eId, tag.getValue(), function(error, sections)
 		{
 			if (error)
 			{
 				return callback(error, null);
+			}	
+
+			if (sections.length==0)
+			{
+				return callback(null, []);
 			}
 
-			if (isPermitted==true)
+			var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
+			var finalLength = sections.length;
+			for (var i=sections.length-1; i>=0 ; i--)
 			{
-				exports.permitted_getJotRecord(db, null, documentId, function(error, docRecord)
-				{
-					if (error || docRecord.length==0)
+				// (function(i, sections, sectionsList) { 
+					var section = sections[i];
+					
+					Permissions.validateSectionLevelPermissions(db, section[OpsConfig.SectionFields.DocumentId], 
+						section[OpsConfig.SectionFields.SectionId], requiredPermissions, function(error, isPermitted)
 					{
-						return callback(error, null);
-					}
+						if (!error && isPermitted==true)
+						{
+							this.sectionsList.push(this.section);
+						}
 
-					docRecord[0] = parseJotRecord(eId, docRecord[0]);
-					return callback(null, docRecord);
-				});			
+						if (this.sectionsList.length==this.finalLength)
+						{
+							// console.log('API_getSectionsForTag', sectionsList);
+							return callback(null, this.sectionsList);
+						}
+					}.bind({i:i, section: section, sectionsList:sectionsList, finalLength: finalLength}));
+     			// } (i, sections, sectionsList));
 			}
-			else
-			{
-				// var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
-				var error = Helpers.LogUnauthorizedError();
-				return callback(error, null);
-			}
-		});		
+		});
 	}
 	else
 	{
@@ -335,24 +268,23 @@ permitted_deleteJotAndSections = function(db, eId, jotId, callback)
 	});	
 }
 
-
-exports.getAllReadableJots = function(db, eId, callback)
+permitted_getTagsFromJots = function(db, jotIds, callback)
 {
 	// var permissions = permissions.read_write[eId];
-	var findQuery = 
+	if (!jotIds)
 	{
-		'$or' : [ 
-				{ [OpsConfig.SectionFields.EmployeeId]: eId }, 
-				{ [OpsConfig.Permissions_Read]: { $in: [eId] }}
-			]
-	};
+		return callback(null, []);
+	}
+	var fieldString = OpsConfig.SectionFields.Tags;
+	var findQuery = { [OpsConfig.SectionFields.DocumentId]: { $in: jotIds }};
 
-	Database.GetQuery(
+	Database.GetDistinct(
 		db, 
-		Database.Tables.Documents, 
+		Database.Tables.Sections, 
+		fieldString, 
 		findQuery, 
-		OpsConfig.GET_AllDocuments_Projection, 
-		function(error, docs)
+		{}, 
+		function(error, tags)
 	{
 		if (error)
 		{
@@ -360,11 +292,40 @@ exports.getAllReadableJots = function(db, eId, callback)
 			return callback(error, null);
 		}
 
-		for (var i=0; i<docs.length; i++)
+		return callback(null, tags);	
+	});
+}
+
+
+getAllTagsFromReadableJots = function(db, eId, callback)
+{
+	Jots.getAllReadableJots(db, eId, function(error, jots)
+	{
+		if (error)
 		{
-			parseJotRecord(eId, docs[i]);
+			return callback(error, null);
 		}
 
-		return callback(null, docs);	
+		var jotIds=[];
+		for (var i=0; i<jots.length; i++)
+		{
+			jotIds.push(jots[i][OpsConfig.JotFields.DocumentId]);
+		}
+
+		if (jotIds.length==0)
+		{
+			return callback(null, []);
+		}
+
+		permitted_getTagsFromJots(db, jotIds, function(error, tags)
+		{
+			if (error)
+			{
+				return callback(error, null);
+			}
+
+			return callback(error, tags);
+		});
 	});
+
 }

@@ -1,5 +1,5 @@
 <template>
-<div class="container">
+<div >
   <span v-if="isLoaded===false">
     {{loadingMessage}} <font-awesome-icon size="lg" icon="spinner" class="fa-spin" />
   </span>
@@ -161,10 +161,7 @@ export default
 
   font-size: 0.8em;
 }
-.container
-{
-  padding-top: 70px;
-}
+
 
 h3 {
   margin: 40px 0 0;

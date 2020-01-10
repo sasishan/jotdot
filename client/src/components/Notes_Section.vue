@@ -10,7 +10,7 @@
       <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true" @set-plain-text="convertToPlainText"/>      
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
-      <Notes_Flyout @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
+      <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>
     <div 
       :id="getId"
@@ -34,6 +34,7 @@
       :allowEdit=allowEdit
       :haveWritePermissions=haveWritePermissions
       :searchText = 'searchText'
+      :offset="0"
       v-if="(getOpenState) || allowEdit==false" 
       @save-section="emitSaveSection"
       @special-key-pressed="emitKeyPress"
@@ -158,6 +159,7 @@ export default
 {
   name: 'Notes_Section',
   props: {
+    offset: {},
     section:{},
     depth: 0,
     allowEdit: {}, 
@@ -352,7 +354,7 @@ export default
     },
     sectionIndent()
     {
-      this.baseSectionStyle.left=this.sectionLeft+(this.depth*this.indentDelta)+'px';
+      this.baseSectionStyle.left=this.offset+this.sectionLeft+(this.depth*this.indentDelta)+'px';
 
       if (this.allowEdit==false)
       {
@@ -363,33 +365,33 @@ export default
     },
     menuIndent()
     {
-      this.baseMenuBulletStyle.left=this.menuBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseMenuBulletStyle.left=this.offset+this.menuBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseMenuBulletStyle;
     },
     archiveIndent()
     {
-      this.archiveBulletStyle.left=this.archiveBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.archiveBulletStyle.left=this.offset+this.archiveBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.archiveBulletStyle;
     },   
     formatIndent(offset)
     {
-      this.baseFormatBulletStyle.left=this.formatBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseFormatBulletStyle.left=this.offset+this.formatBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseFormatBulletStyle;
     },     
     formatNoUpIndent()
     {
       var offset=20;
-      this.baseFormatBulletStyle.left=(this.formatBulletLeft+offset)+(this.depth*this.indentDelta)+'px';
+      this.baseFormatBulletStyle.left=(this.offset+this.formatBulletLeft+offset)+(this.depth*this.indentDelta)+'px';
       return this.baseFormatBulletStyle;
     },
     upIndent()
     {
-      this.baseUpBulletStyle.left=this.upBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseUpBulletStyle.left=this.offset+this.upBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseUpBulletStyle;
     },
     bulletIndent() 
     {
-      this.baseBulletStyle.left=this.bulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseBulletStyle.left=this.offset+this.bulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseBulletStyle;
     }
   },
@@ -667,25 +669,43 @@ export default
     },
     getTags(text, separator)
     {
-        var hashtags = text.match(Common.HashTagMatch);
+      console.log(Common.HashTagTextClass);
+      var tags=[];
+      var tagElements = this.$refs.section_text.getElementsByClassName(Common.HashTagTextClass);
+      for (var i=0; i< tagElements.length; i++)
+      {
+        tags.push(tagElements[i].innerText);
+      }
+      // var result = str.match(/<b>(.*?)<\/b>/g).map(function(val){
+      //   return val.replace(/<\/?b>/g,'');
+      // });
 
-        var tags=[];
-        if (hashtags)
-        {
-          for (var i=0; i<hashtags.length; i++)
-          {
-            var t = hashtags[i].split(separator).filter(x => x);
-            if (t.length>0)
-            {
-              tags.push(t)
-            }
-            else
-            {
-              tags.push(hashtags[i])
-            }
-          }
-        }
-        return tags;
+      // console.log(root);
+      // var tags = [].map.call( root.querySelectorAll("hashTagText"), function(v)
+      // {
+      //   console.log(v);
+      //   return v.textContent || v.innerText || "";
+      // });      
+      // var hashtags = text.match(Common.HashTagMatch);
+
+      // var tags=[];
+      // if (hashtags)
+      // {
+      //   for (var i=0; i<hashtags.length; i++)
+      //   {
+      //     var t = hashtags[i].split(separator).filter(x => x);
+      //     if (t.length>0)
+      //     {
+      //       tags.push(t)
+      //     }
+      //     else
+      //     {
+      //       tags.push(hashtags[i])
+      //     }
+      //   }
+      // }
+      console.log(tags);
+      return tags;
     },      
     markTags(element, html, separator) 
     {

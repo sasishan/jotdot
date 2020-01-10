@@ -57,16 +57,20 @@ exports.Operation_deleteSection = function(db, eId, data, callback)
 
 		if ( documentId.isValid() && sectionId.isValid() )
 		{			
-			getSection(db, documentId, sectionId, function(error, section)
+			exports.getSection(db, documentId.getValue(), sectionId.getValue(), function(error, section)
 			{
 				if (error)
 				{
 					return callback(error, null);
 				}
 
+				if (!section)
+				{
+					return callback(null, {});
+				}
 				var parentSection = section.parentSection;
 				var position = section.position;
-				var findQuery = docSectionFind(documentId, sectionId);
+				var findQuery = docSectionFind(documentId.getValue(), sectionId.getValue());
 
 				Database.DeleteQuery(db, Database.Tables.Sections, 
 					findQuery, {}, 
@@ -130,7 +134,7 @@ exports.Operation_updateSection = function(db, eId, data, callback)
 		}	
 
 		var requiredPermissions = new Objects.RequiredPermissions(eId, true, true);
-		Permissions.validateSectionLevelPermissions(db, documentId, sectionId, requiredPermissions, function(error, isPermitted)
+		Permissions.validateSectionLevelPermissions(db, documentId.getValue(), sectionId.getValue(), requiredPermissions, function(error, isPermitted)
 		{
 			if (error)
 			{
@@ -148,7 +152,7 @@ exports.Operation_updateSection = function(db, eId, data, callback)
 
 			if ( updateQuery!=null )
 			{			
-				var findQuery = docSectionFind(documentId, sectionId);
+				var findQuery = docSectionFind(documentId.getValue(), sectionId.getValue());
 
 				Database.SetFieldQuery( db, Database.Tables.Sections, findQuery, updateQuery, null, 
 				function(error, results)
@@ -158,21 +162,26 @@ exports.Operation_updateSection = function(db, eId, data, callback)
 						var error = Helpers.logError('Could not update', Helpers.INTERNAL_ERROR);
 						return callback(error, null);
 					}
+
+					permitted_lastUpdatedJot(db, documentId.getValue(), function (error, jot)
+					{
+						return callback(null, results);
+					});
 					
-					var findJotQuery = { [OpsConfig.JotFields.DocumentId]: documentId.getValue() };
-					var updateLastUpdated = { lastUpdated: new Date() };
-					Database.SetFieldQuery( 
-						db, Database.Tables.Documents, findJotQuery, updateLastUpdated, null, 
-						function(error, updatedJot)
-						{
-							if (error)
-							{
-								var error = Helpers.logError('Could not update', Helpers.INTERNAL_ERROR);
-								return callback(error, null);
-							}
+					// var findJotQuery = { [OpsConfig.JotFields.DocumentId]: documentId.getValue() };
+					// var updateLastUpdated = { lastUpdated: new Date() };
+					// Database.SetFieldQuery( 
+					// 	db, Database.Tables.Documents, findJotQuery, updateLastUpdated, null, 
+					// 	function(error, updatedJot)
+					// 	{
+					// 		if (error)
+					// 		{
+					// 			var error = Helpers.logError('Could not update', Helpers.INTERNAL_ERROR);
+					// 			return callback(error, null);
+					// 		}
 							
-							return callback(null, results);
-						});
+					// 		return callback(null, results);
+					// 	});
 				});
 			}	
 			else
@@ -209,7 +218,7 @@ exports.Operation_moveSection = function(db, eId, data, callback)
 
 		if ( documentId.isValid() && sectionId.isValid() && newPosition!=null && newParentSection!=null)
 		{			
-			getSection(db, documentId, sectionId, function(error, section)
+			exports.getSection(db, documentId.getValue(), sectionId.getValue(), function(error, section)
 			{
 				if (error)
 				{
@@ -271,7 +280,7 @@ exports.Operation_moveSection = function(db, eId, data, callback)
 						});
 					}
 
-					var findQuery = docSectionFind(documentId, sectionId);
+					var findQuery = docSectionFind(documentId.getValue(), sectionId.getValue());
 
 					//update the position
 					Database.SetFieldQuery(
@@ -288,7 +297,11 @@ exports.Operation_moveSection = function(db, eId, data, callback)
 							return callback(error, null);
 						}
 						
-						return callback(null, results);
+						permitted_lastUpdatedJot(db, documentId.getValue(), function (error, jot)
+						{
+							return callback(null, results);
+						});						
+						// return callback(null`, results);
 					});
 				});					
 			});
@@ -344,7 +357,25 @@ exports.API_getOneDocumentsSections = function(db, eId, data, callback)
 	}	
 }
 
-//Permitted change
+//Permitted changes
+permitted_lastUpdatedJot = function(db, documentId, callback)
+{
+	var findJotQuery = { [OpsConfig.JotFields.DocumentId]: documentId };
+	var updateLastUpdated = { lastUpdated: new Date() };
+	Database.SetFieldQuery( 
+		db, Database.Tables.Documents, findJotQuery, updateLastUpdated, null, 
+		function(error, updatedJot)
+		{
+			if (error)
+			{
+				var error = Helpers.logError('Could not update Jot', Helpers.INTERNAL_ERROR);
+				return callback(error, null);
+			}
+			
+			return callback(null, updatedJot);
+		});
+};
+
 permitted_addSection = function(db, eId, data, callback)
 {
 	var orgId='1';
@@ -588,7 +619,29 @@ getUpdateQuery = function(data)
 	return setStatement;
 }
 
-getSection = function(db, documentId, sectionId, callback)
+exports.permitted_getSectionsByTag = function(db, eId, tags, callback)
+{
+	var findQuery = {tags: tags};
+
+	console.log(findQuery);
+	Database.GetQuery(
+		db, 
+		Database.Tables.Sections, 
+		findQuery, 
+		{}, 
+		function(error, sections)
+	{
+		if (error)
+		{
+			var error = Helpers.logError('Error finding section by tag', Helpers.INTERNAL_ERROR);
+			return callback(error, null);
+		}
+
+		return callback(null, sections);	
+	});
+}
+
+exports.getSection = function(db, documentId, sectionId, callback)
 {
 	var findQuery = docSectionFind(documentId, sectionId);
 
@@ -604,7 +657,6 @@ getSection = function(db, documentId, sectionId, callback)
 			var error = Helpers.logError('Could not find section', Helpers.INTERNAL_ERROR);
 			return callback(error, null);
 		}
-		console.log('getSection',findQuery, section[0]);
 		return callback(null, section[0]);	
 	});
 }
@@ -723,16 +775,10 @@ getMoveQuery = function(documentId, oldPosition, oldParentSectionId, newPosition
 
 docSectionFind = function(documentId, sectionId)
 {
-	if (documentId.isValid() && sectionId.isValid())
-	{
-		var q = { 	[OpsConfig.SectionFields.DocumentId]: documentId.getValue(), 
-					[OpsConfig.SectionFields.SectionId]: sectionId.getValue() 
+	var q = { 	[OpsConfig.SectionFields.DocumentId]: documentId, 
+					[OpsConfig.SectionFields.SectionId]: sectionId 
 				};
 		return q;
-	}
-	else
-	{
-		return null;
-	}
+
 }
 

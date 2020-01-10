@@ -2,6 +2,7 @@ var  Database  = require('../Database/Database')
 	,Helpers  = require('../Helpers')
 	,OpsConfig = require('../OperationsConfig')
 	,Objects = require('../Objects')
+	,Sections = require('../Database/Sections')
 	,Jots  = require('../Database/Jots');
 
 
@@ -29,22 +30,45 @@ exports.validateDocumentPermissions=function(db, documentId, requiredPermissions
 	});
 }
 
-exports.validateSectionLevelPermissions = function(db, documentIdObject, sectionIdObject, requiredPermissions, callback)
+// async exports.validateSectionLevelPermissions=function(db, documentIdObject, sectionIdObject, requiredPermissions, callback)
+// {
+// 	return new Promise(function(resolve, reject) 
+// 	{
+// 		try 
+// 		{
+// 			axios.post(url, data, {headers: headers}).then(function(response)
+// 			{
+// 				var results = response.data;
+// 				resolve(results);
+// 			}, function(error)
+// 			{
+// 				console.log('An error occurred: ', error);
+// 				resolve(null);
+// 			});
+// 		}
+// 		catch (err) 
+// 		{
+// 			console.log('A reject error occurred: ', err);
+// 			reject(err);
+// 		}		
+// 	});
+// }
+exports.validateSectionLevelPermissions = function(db, documentId, sectionId, requiredPermissions, callback)
 {
 	//if doc level has read/write permissions then user can read/write all sections of the doc
 	//if doc level does not have read but section has read, then has requirements for read otw no
 	//if doc level does not have write but section has write, then has requirements for write otw no
 	//
-	getSection(db, documentIdObject, sectionIdObject, function(error, section)
+	Sections.getSection(db, documentId, sectionId, function(error, section)
 	{
 		//get the section to make sure we get the right document ID that cant be spoofed
 		if (error || !section)
 		{
-			console.log('ERROR validateSectionLevelPermissions ', documentIdObject, sectionIdObject, section);
+			console.log('ERROR validateSectionLevelPermissions ', documentId, sectionId, section);
 			return callback(error, null);			
 		}
 
-		exports.validateDocumentPermissions(db, documentIdObject.getValue(), requiredPermissions, function(error, isPermittedAtDocLevel)
+		exports.validateDocumentPermissions(db, section[OpsConfig.SectionFields.DocumentId], requiredPermissions, function(error, isPermittedAtDocLevel)
 		{
 			if (error)
 			{

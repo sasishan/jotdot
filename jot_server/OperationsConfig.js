@@ -68,6 +68,8 @@ OpsConfig.MOVE_DOWNSTREAM = -1;
 OpsConfig.APPEND = 0;
 
 OpsConfig.APIPath_JotId = "jotId";
+OpsConfig.APIPath_TagName = "tag";
+
 OpsConfig.APIPaths=
 {
     GET_OneJotsSections: '/api/v1/documents/:' + OpsConfig.APIPath_JotId,
@@ -75,6 +77,8 @@ OpsConfig.APIPaths=
     GET_OneJot:'/api/v1/jots/:' + OpsConfig.APIPath_JotId,
     POST_NewJot: '/api/v1/jots',
     DELETE_OneJot:'/api/v1/jots/delete/:'+ OpsConfig.APIPath_JotId,
+    GET_AllTags: '/api/v1/tags',
+    GET_TagSections: '/api/v1/tags/:'+OpsConfig.APIPath_TagName,
 };
 
 OpsConfig.GET_AllDocuments_Projection= { projection: {documentId: 1, title: 1, permissions: 1, eId: 1 , created:1, lastUpdated:1, _id: 0}};

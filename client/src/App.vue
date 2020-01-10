@@ -1,11 +1,12 @@
 <template>
   <div id="app">
     <NavMenu v-if="isSignedIn" />
-    <b-container>
+    <br>
+    <b-container class="main_container">
       <div class="col-lg-11 main ml-5 mr-5 mb-5">      
         <router-view :key="$route.fullPath"></router-view>
       </div>
-  </b-container>
+    </b-container>
   </div>
 </template>
 
@@ -65,6 +66,15 @@ export default
   border-top: 1px dashed grey;
 }
 
+.main_container
+{
+  padding-top: 20px;
+}
+
+.ghostClass
+{
+  opacity:0;
+}
 .main
 {
   margin-top: 20px;

@@ -91,6 +91,9 @@ app.get(OpsConfig.APIPaths.GET_AllJots, isAuthenticated, APIs.receiveAPIRequest)
 app.get(OpsConfig.APIPaths.GET_OneJot, isAuthenticated, APIs.receiveAPIRequest);
 app.post(OpsConfig.APIPaths.POST_NewJot, isAuthenticated, APIs.receiveAPIRequest);
 app.delete(OpsConfig.APIPaths.DELETE_OneJot, isAuthenticated, APIs.receiveAPIRequest);
+app.get(OpsConfig.APIPaths.GET_AllTags, isAuthenticated, APIs.receiveAPIRequest);
+app.get(OpsConfig.APIPaths.GET_TagSections, isAuthenticated, APIs.receiveAPIRequest);
+
 // app.post('/api/v1/documents/:docId/sections/new', isAuthenticated, APIs.receiveNewSection);
 
 

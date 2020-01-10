@@ -79,6 +79,39 @@ exports.GetMaxMin = function(db, collectionName, findQuery, sortOptions, callbac
     }
 }
 
+exports.GetDistinct = function(db, collectionName, fieldString, findQuery, options, callback)
+{
+	if (!db || !collectionName || !findQuery)
+	{
+		return callback({ errorCode: -1, errorMessage: "Invalid parameters"}, null);
+	}
+
+    var collection = db.get(collectionName);
+    if (!collection)
+    {
+    	return callback({ errorCode: -1, errorMessage: "No collection found"}, null);
+    }
+
+    try
+    {
+	    collection.distinct( fieldString, findQuery, options, function(error, result)
+		{	    	
+	    	if (error)
+			{
+	    		console.log(error);
+	    		return callback({ errorCode: -2, errorMessage: "Error executing distinct query"}, null);
+			}
+	    
+			return callback(null, result);
+		});
+    }
+    catch (error)
+    {
+    	return callback({ errorCode: -3, errorMessage: "Internal exception: "+error}, null);
+    }
+}
+
+
 exports.GetQuery = function(db, collectionName, findQuery, options, callback)
 {
 	if (!db || !collectionName || !findQuery)

@@ -1,6 +1,5 @@
 <template>
-  <span>  
-  <br><br>
+  <span class="main_container">  
   <span v-if="errorOccurred===true">
     <h6 class="text-danger mt-5">{{error}}</h6>
   </span>
@@ -12,8 +11,7 @@
       <JotsMenu 
       @toggle-tags="toggleTags()"
       @toggle-print="togglePrint()"
-      @delete-jot="showDeleteJotConfirm()"
-        />     
+      @delete-jot="showDeleteJotConfirm()"/>     
     </div>  
   </span>  
   <span v-if="isLoaded===true && showTags==false"> 
@@ -32,6 +30,7 @@
           :section="section" 
           :depth="0" 
           :searchText='searchText'
+          :offset="0"
           v-if="isLoaded==true" 
           class="list-item"
           @section-in-focus="sectionInFocus"
@@ -40,6 +39,7 @@
           @special-key-pressed="keyMonitor" 
           @special-key-down-pressed="keyDownMonitor"
           @save-section="saveSections"
+
           />
       </transition-group>
     </draggable>
@@ -486,21 +486,22 @@ export default
     }, 
     getPriorSection(parentSection, section)
     {
-      var prior;
+      // var prior;
+      // console.log('getPriorSection',parentSection.sections);
       for (var i=0; i< parentSection.sections.length; i++)
       {
         if (parentSection.sections[i].id == section.id)
         {
-          if (prior && prior.id!=section.id)
-          {
-            return prior;
-          }
-          else
+          if (i==0)
           {
             return parentSection; //its the first in the array
           }
+          else
+          {
+            return parentSection.sections[i-1];
+          }
         }
-        prior = parentSection.sections[i];
+        // prior = parentSection.sections[i];
       }
 
       return null;

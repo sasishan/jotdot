@@ -1,6 +1,6 @@
 var Sections = require('../Database/Sections'),
 	Objects = require('../Objects'),
-	Helpers = require('../Helpers'),
+	Helpers = require('../Helpers'),	
 	Processors = require('../Processors');
 
 exports.receiveAPIRequest = function(req, res)

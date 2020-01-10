@@ -1,5 +1,6 @@
 var Sections = require('./Database/Sections'),
 	Jots = require('./Database/Jots'),
+	Tags = require('./Database/Tags'),
 	OpsConfig = require('./OperationsConfig');
 
 exports.getProcessor = function(operationType)
@@ -46,6 +47,12 @@ exports.getAPIProcessor = function(apiPath)
 		case OpsConfig.APIPaths.GET_OneJotsSections:
 			return Sections.API_getOneDocumentsSections;	
 
+		case OpsConfig.APIPaths.GET_AllTags:
+			return Tags.API_getAllTags;	
+
+		case OpsConfig.APIPaths.GET_TagSections:
+			return Tags.API_getSectionsForTag;
+			
 		default:
 			console.log('Invalid path: '+ apiPath + ' found for processor');
 			return undefined;

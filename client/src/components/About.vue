@@ -1,6 +1,5 @@
 <template>
   <div>
-  <br>
   <h3>About</h3>
   <br>
   Jot Dot is a free note making tool based on the popular Workflowy tool. It is currently in beta.
