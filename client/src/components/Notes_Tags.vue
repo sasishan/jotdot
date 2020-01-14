@@ -98,7 +98,7 @@ export default
     },
     sectionSelected(section)
     {
-      Common.GoToSection(section, this.$router);
+      Common.GoToSection(section.documentId, section.parentSection, this.$router);
     },
     compare(a,b) 
     {

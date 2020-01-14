@@ -3,19 +3,14 @@ import Vue from 'vue';
 import Common from '../Common.js';
 import Comms from './Comms.vue';
 import OpsConfig from '../OperationsConfig.js';
-import { uuid } from 'vue-uuid';
+
 
 export default 
 {
 	name: 'Operations',
 	components: 
 	{
-	}, 	
-	getNewSectionId()
-	{
-	    var id = uuid.v4();
-	    return id;
-	},		
+	}, 			
 	queueOperation(store, item) 
 	{			
 		var op = null;
@@ -147,11 +142,11 @@ export default
 			console.log(e);
 		}
     },
-    addSectionOp(store, toSectionArray, parentSection, atIndex=-1)
+    // addSectionOp(store, toSectionArray, parentSection, atIndex=-1)
+    addSectionOp(store, newSection, parentSection, atIndex=-1)
     {      
 		try
 		{
-			var newSection = this.addSection(toSectionArray, parentSection.id, atIndex);
 			var operation = {
 					type: OpsConfig.ValidClientOperations.AddSection, 
 					section: newSection, 
@@ -173,7 +168,6 @@ export default
     	// if (store.getters.getOpsQueue.length==0)
     	{
     		// console.log(store.getters.getOpsQueue.length);
-    		console.log('added dummy op');
     		this.queueOperation(store, { type: OpsConfig.ValidClientOperations.NoOp} );	
     	}
     	
@@ -241,25 +235,7 @@ export default
 			sectionToRemove.priorId=undefined;
 		}	
 	},    
-	addSection(currentSection, parentSection, atIndex)
-	{			
-		var sectionId = this.getNewSectionId();
-		var priorId = undefined;
-		var text =' ';
 
-		var item = {id: sectionId, text: text, open: true, priorId: undefined, parentSection: parentSection, sections:[]};	
-
-		if (atIndex>-1)
-		{
-			currentSection.splice(atIndex, 0, item);
-		}
-		else
-		{
-			currentSection.push(item);	
-		}
-
-		return item;
-	},
 
 }
 

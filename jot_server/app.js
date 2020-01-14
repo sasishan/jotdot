@@ -20,11 +20,13 @@ const db = monk(dbURI);
 const cognito = new cognitoExpress(config.COGNITO_CONFIG);
 
 app.set('port', process.env.PORT || config.port);
-app.use(bodyParser());
-app.use(bodyParser.json());
+app.use(bodyParser({limit: '50mb'}));
+app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+
 
 app.use(function(req, res, next) {
     // CORS headers

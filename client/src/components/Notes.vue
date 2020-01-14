@@ -39,7 +39,6 @@
           @special-key-pressed="keyMonitor" 
           @special-key-down-pressed="keyDownMonitor"
           @save-section="saveSections"
-
           />
       </transition-group>
     </draggable>
@@ -78,26 +77,9 @@ import { Auth } from 'aws-amplify';
 import draggable from 'vuedraggable';
 import OpsConfig from '../OperationsConfig.js';
 import Common from '../Common.js';
-
-
+import TextFormatter from '../TextFormatter.js';
 import JotsMenu from '../components/Jots_Menu.vue';
-
-function getCaretPosition(el)
-{
-  var caretOffset = 0, sel;
-
-  if (typeof window.getSelection !== "undefined") 
-  {
-    var range = window.getSelection().getRangeAt(0);
-    var selected = range.toString().length;
-    var preCaretRange = range.cloneRange();
-    preCaretRange.selectNodeContents(el);
-    preCaretRange.setEnd(range.endContainer, range.endOffset);
-    caretOffset = preCaretRange.toString().length - selected;
-  }
-  
-  return caretOffset;
-}
+import { uuid } from 'vue-uuid';
 
 export default 
 {
@@ -289,7 +271,6 @@ export default
           this.showDeleteJotWasCancelled(Common.Messages.DeleteErrorMessage);
           return;
         }
-
       }
       else
       {
@@ -672,29 +653,57 @@ export default
       var parentSection = this.getSectionById([this.currentMainSection], this.currentFocusedSection.parentSection, false);  
       var index = this.getSectionIndexById(parentSection.sections, this.currentFocusedSection.id);
       var element = document.getElementById(this.currentFocusedSection.id);
-      var caretPosition = getCaretPosition(element);
+      var caretPosition = TextFormatter.getCaretPosition(element);
 
       var newSection={};
+      var parent ={};
+      var toSection={};
+      var position =Common.APPEND_SECTION;
 
       if (caretPosition==0)
       {
-        newSection = Operations.addSectionOp(this.$store, parentSection.sections, parentSection, index);
+        // addSection(store, toSectionArray, parentSection, atIndex=-1)
+        // newSection = this.addSection(parentSection.sections, parentSection, index);
+        toSection=parentSection.sections;
+        parent =parentSection;
+        position = index;
+        // Operations.addSectionOp(this.$store, parentSection.sections, parentSection, index);
       }
       else if (this.currentFocusedSectionDepth==0)
       {
-        newSection = Operations.addSectionOp(this.$store, this.currentSelection, this.currentMainSection, index+1);   
+        // newSection = this.addSection(this.currentSelection, this.currentMainSection, index+1);
+        toSection=this.currentSelection;
+        parent =this.currentMainSection;
+        position = index+1;
+        // Operations.addSectionOp(this.$store, this.currentSelection, this.currentMainSection, index+1);   
       }
       else if ( (this.currentFocusedSection.open==false) || 
                 (this.currentFocusedSectionDepth>0 && section.sections.length==0) )
       {
         //if the section has no children, add a new node at the same level
-        newSection= Operations.addSectionOp(this.$store, parentSection.sections, parentSection, index+1);   
+        toSection=parentSection.sections;
+        parent =parentSection;
+        position = index+1;
+
+        // newSection = this.addSection(parentSection.sections, parentSection, position);
+        // Operations.addSectionOp(this.$store, parentSection.sections, parentSection, index+1);   
       }
       else if (section.sections.length>0)
       {
         //if the section has children, add to the current children
-        newSection= Operations.addSectionOp(this.$store, section.sections, section, index+1);  
+        // newSection = this.addSection(section.sections, section, index+1);
+        // Operations.addSectionOp(this.$store, section.sections, section, index+1);  
+        toSection=section.sections;
+        parent =section;
+        position = index+1;        
       }
+      else
+      {
+        return;
+      }
+
+      newSection = this.addSection(toSection, parent, position);
+      Operations.addSectionOp(this.$store, newSection, parent, position);
 
       Vue.nextTick(() => { 
         document.getElementById(newSection.id).focus();
@@ -715,7 +724,8 @@ export default
     addNewSection()
     {
       // this.addSection(this.currentSelection, this.currentMainSection);
-      var newSection = Operations.addSectionOp(this.$store, this.currentSelection, this.currentMainSection);
+      var newSection  = this.addSection(this.currentSelection, this.currentMainSection, Common.APPEND_SECTION);
+      Operations.addSectionOp(this.$store, this.currentSelection, this.currentMainSection);
 
       Vue.nextTick(() => { 
         document.getElementById(newSection.id).focus();
@@ -783,6 +793,32 @@ export default
     sectionSelected(event, sectionId)
     {
     }
+    ,
+    getNewSectionId()
+    {
+        var id = uuid.v4();
+        return id;
+    },
+    addSection(currentSection, parentSection, atIndex)
+    {     
+      var sectionId = this.getNewSectionId();
+      var priorId = undefined;
+      var text =' ';
+
+      var item = {id: sectionId, text: text, html: "</br class='new'>", open: true, priorId: undefined, parentSection: parentSection.id, sections:[]};  
+
+      if (atIndex>Common.APPEND_SECTION)
+      {
+        currentSection = currentSection.splice(atIndex, 0, item);
+        // Vue.set(currentSection, atIndex, item)
+      }
+      else
+      {
+        currentSection.push(item);  
+      }
+
+      return item;
+    },    
   }
 
 }

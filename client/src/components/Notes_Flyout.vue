@@ -53,7 +53,7 @@ export default
     clickFlyout:function(event)
     {      
       // this.$emit('flyout-click', event);
-      Common.GoToSection(this.section, this.$router);
+      Common.GoToSection(this.section.documentId, this.section.id, this.$router);
       // this.$router.push({name:'sectionsById', params:{sectionId: this.sectionId}});
     }     
   }

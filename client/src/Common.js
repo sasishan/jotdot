@@ -20,6 +20,8 @@ Common.PersonTag = '@';
 Common.PersonTag = /@\S+/g;
 Common.SearchPlaceholder="Search this jot..."
 
+Common.APPEND_SECTION = -1;
+
 Common.RootSectionId = '-1';
 Common.Fields = 
 {
@@ -71,9 +73,9 @@ Common.KeyEventTypes=
 }
 
 
-Common.GoToSection = function(section, router)
+Common.GoToSection = function(documentId, sectionId, router)
 {
-  router.push({name:'sectionsById', params: { jotId: section.documentId, sectionId: section.id}});
+  router.push({name:'sectionsById', params: { jotId: documentId, sectionId: sectionId}});
 }
 
 Common.GoToJots = function(router)
@@ -116,7 +118,9 @@ Common.setEndOfContenteditable = function(contentEditableElement)
       {
           range = document.createRange();//Create a range (a range is a like the selection but invisible)
           // console.log(contentEditableElement);
+          contentEditableElement.focus();
           range.selectNodeContents(contentEditableElement);//Select the entire contents of the element with the range
+          // console.log(contentEditableElement);
           range.collapse(false);//collapse the range to the end point. false means collapse to end rather than the start
           selection = window.getSelection();//get the selection object (allows you to change selection)
           selection.removeAllRanges();//remove any selections already made
@@ -165,27 +169,7 @@ Common.setEndOfContenteditable = function(contentEditableElement)
   // el.focus();  
 // }
 
-Common.SetCaretPositionEndOfTag = function(el, text) 
-{
-  var range = document.createRange();
-  var sel = window.getSelection();
 
-  for (var i=0; i<el.childNodes.length; i++)
-  {
-    child = el.childNodes[i];
-
-    if (child.className==Common.TagContentClass)
-    {
-      range.setStart(el.childNodes[i+1], 1);
-      range.collapse(true);      
-    }
-  }
-  
-  sel.removeAllRanges();
-  sel.addRange(range);
-  
-  el.focus();  
-}
 
 Common.InsertTextAtCursor = function(text) {
     var sel, range;
