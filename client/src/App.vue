@@ -30,6 +30,7 @@ export default
     await AuthHelper.updateSignInStatus(this.$store);
     if (this.$store.state.signedIn === true) 
     {
+      
       Common.GoToJots(this.$router);
     }
     else 

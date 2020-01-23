@@ -11,6 +11,8 @@ import UUID from 'vue-uuid';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { library } from '@fortawesome/fontawesome-svg-core'
 import Notes_Section from './components/Notes_Section.vue';
+import sanitizeHTML from 'sanitize-html';
+
 // import moment from 'moment';
 import {faSquare, faArrowCircleRight, faCircle, faAngleUp, faCog, faHashtag,
         faAngleDown, faTrashAlt, faSpinner, faEdit, faPrint, faArchive, faEllipsisH} from '@fortawesome/free-solid-svg-icons';
@@ -58,7 +60,6 @@ router.beforeEach((to, from, next) =>
         Auth.currentSession()
         .then(function(session)
         {
-            
             if (session)
             {
                 next();
@@ -83,7 +84,6 @@ router.beforeEach((to, from, next) =>
     }
 })
 
-
 Vue.use(VueRouter);
 Vue.use(AmplifyPlugin, AmplifyModules);
 Vue.use(UUID);
@@ -98,6 +98,8 @@ if (token)
 {
   Vue.prototype.$http.defaults.headers.common['Authorization'] = token
 }
+
+Vue.prototype.$sanitize = sanitizeHTML;
 
 library.add(faEdit, faSquare, faArrowCircleRight, faCircle, faAngleUp, faAngleDown, faTrashAlt, faSpinner, faPrint, faCog, faHashtag, faArchive, faEllipsisH);
 Vue.component('font-awesome-icon', FontAwesomeIcon)

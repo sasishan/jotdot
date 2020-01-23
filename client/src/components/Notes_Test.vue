@@ -1,6 +1,7 @@
 <template>
   <div >
-    <span :style="getSectionsLength>0 ? formatIndent : formatNoUpIndent" v-if="showFormatMenu && allowEdit==true" >
+  <br><br><br>
+<!--    <span :style="getSectionsLength>0 ? formatIndent : formatNoUpIndent" v-if="showFormatMenu && allowEdit==true" >
       <Notes_Formatter @format-text="formatText" />        
     </span>     
     <span :style="upIndent" v-if="getSectionsLength>0 && allowEdit==true" >
@@ -11,38 +12,16 @@
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
-    </span>
+    </span>-->
     <div 
-      :id="getId"
+      id="main"
       ref="section_text"         
-      v-html="getSectionText"
+      v-html="sectionText"
       :style="sectionIndent" 
       :contenteditable="true" 
-      v-on:keyup="keyMonitor($event)"  
-      @keydown.tab.prevent 
-      @keyDown.shift.prevent
       v-on:keydown="keyDownMonitor"
-      @focus = "focusSection"
-      @mouseup="getSelectedText"
-      @input="inputText"
-      @blur = "blurSection($event, section)"> 
+      @input="inputText">
     </div>
-   <draggable v-model="getSections" :disabled="isMobile()" @end="dragEnd" v-bind="dragOptions()">
-    <Notes_Section v-for="(section, index) in getSections" 
-      :section="section" 
-      :depth="depth+1" 
-      :allowEdit=allowEdit
-      :haveWritePermissions=haveWritePermissions
-      :searchText = 'searchText'
-      :offset="0"
-      v-if="(getOpenState) || allowEdit==false" 
-      @save-section="emitSaveSection"
-      @special-key-pressed="emitKeyPress"
-      @section-in-focus="sectionInFocus"
-      @section-in-blur="sectionBlurred"
-      @special-key-down-pressed="emitKeyDownPress"
-      />     
-      </draggable>
   </div>
 </template>
 
@@ -225,13 +204,15 @@ export default
   data: function() 
   {
     return { 
+      sectionText:"AA",
+      tagText:"",
+
       tagStarted:false,
       poll:null,
       lastKeyDownEvent:null,
       htmlText:'',
 
       sectionHtml:'', 
-      sectionText:'',
       
       sectionLeft: 50,
       upBulletLeft: 10,
@@ -458,9 +439,13 @@ export default
     {
       return Common.DragOptions;
     },    
-    inputText()
+    inputText(event)
     { 
-      Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
+      // console.log('inputText', event);
+
+      // var curPosition = TextFormatter.currentPosition();
+      // TextFormatter.insertElementAt(curPosition);
+      // Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
     },
     // checkHighlightedText(event)
     // {
@@ -701,20 +686,20 @@ export default
     },
     checkAndQueueDeltaChange(self)
     {
-      if (self.$refs.section_text==null) //during a move, this section can disappear and reappear in new position
-      {
-        return;
-      }
+      // if (self.$refs.section_text==null) //during a move, this section can disappear and reappear in new position
+      // {
+      //   return;
+      // }
 
-      if (self.lastKeyDownEvent && self.section.html!=self.lastKeyDownEvent.target.innerHTML) 
-      {
-        this.textChanged(self.section, self.lastKeyDownEvent.target.innerText, self.lastKeyDownEvent.target.innerHTML);
-        self.lastKeyDownEvent=null;
-      }
-      else if (self.$refs.section_text.innerHTML!=self.section.html)
-      {
-        this.textChanged(self.section, self.$refs.section_text.innerText, self.$refs.section_text.innerHTML);
-      }
+      // if (self.lastKeyDownEvent && self.section.html!=self.lastKeyDownEvent.target.innerHTML) 
+      // {
+      //   this.textChanged(self.section, self.lastKeyDownEvent.target.innerText, self.lastKeyDownEvent.target.innerHTML);
+      //   self.lastKeyDownEvent=null;
+      // }
+      // else if (self.$refs.section_text.innerHTML!=self.section.html)
+      // {
+      //   this.textChanged(self.section, self.$refs.section_text.innerText, self.$refs.section_text.innerHTML);
+      // }
       return;
     },
     getTags(text, separator)
@@ -1077,37 +1062,32 @@ export default
     {
       this.resetSearchText();
       // console.log('keydown', event.target.innerHTML);  
+      
+      // var sectionOffset = TextFormatter.getCaretPosition(event.target);
+      console.log('sectiontop', event.target.offsetTop);
+          Common.sleep(100).then(() => 
+          {
+            // setCaretPositionSpace(event.target, this);
+                  var pos = TextFormatter.getCaretPixelPos(event.target);
+                  console.log(pos);
+          }); 
+      
+
+      if (this.tagStarted)
+      {
+        this.tagText+=event.key;
+      }
+
       if (event.key==" ")
       {
         if (this.tagStarted)
         {
           this.endMarking();
-          var tags = this.markTags(event.target, event.target.innerHTML, '#'); 
-          // console.log(tags);
-          event.target.innerHTML = tags.html;   
-
-          this.removeTrailingLinebreak(event.target);
-          TextFormatter.setCaretToEndOfElementById(tags.tagId);
-
-          this.setTagClick();
-
-          // var position = TextFormatter.getCaretPosition(event.target);
-          // console.log(position);
-          // event.target.innerHTML[position.caretOffset]='A';
-          // console.log(position);
-
- 
-          // TextFormatter.SetCaretPositionEndOfTag(event.target, Common.HashTagTextClass);
-
-          // var text = document.createTextNode(" ");
-          // document.getElementById(tags.tagId).appendChild(text);
-          
-          // TextFormatter.setStartOrEndOfElement(text, false);;
-          // TextFormatter.setCaretPos(event.target, position);
-          // TextFormatter.setCaretPosition(event.target, position);
-
-
-          // TextFormatter.SetCaretPositionEndOfTag(event.target, Common.HashTagTextClass);
+          console.log('end marking', this.tagText);
+          var curPosition = TextFormatter.currentPosition();
+          TextFormatter.deleteText(curPosition, ((this.tagText.length-1)*-1) ); 
+          var tagElement = TextFormatter.insertElementAt(curPosition, 'span', this.tagText, Common.HashTagTextClass); 
+          tagElement.contentEditable = 'false';         
         }
         else
         {
@@ -1119,86 +1099,14 @@ export default
         // this.removeTrailingLinebreak(event.target);
 
       }
-      // else if (event.key==" ")
-      // {
-      //   console.log('space');
-      //   // event.preventDefault();
-      //   // event.stopPropagation();  
-
-      //   // event.target.insertAdjacentHTML('beforeend', '&nbsp;');
-      //   // var sel = window.getSelection();
-
-      //   // if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
-      //   // {
-
-
-      //   // }
-      //   // // this.markTags(event.target, event.target.innerHTML, '#'); 
-      //   Common.sleep(100).then(() => 
-      //   {
-      //     SetCaretPositionSpace(event.target);
-      //   });          
-        
-      //   // var position = SetCaretPositionEndOfTag(event.target);
-
-      //   // event.target.innerHTML +="&nbsp;";
-      //   // Common.SetCaretPositionEndOfTag(event.target, position);
-      // }
       else if (event.key=="#" )
       {   
         // event.preventDefault();
         // event.stopPropagation();          
         this.startMarking();
+        this.tagText="#";
         // this.startHashTag();
       }
-      else if (event.key=="Shift" )
-      {        
-        this.shiftPressed = true;
-      }
-      else if (this.shiftPressed!=true && event.key=="Tab")
-      {
-        //moving this section, so save the text first
-        this.saveContents(event.target);  
-        this.emitKeyDownPress(event, 'tab', this.section);
-      }
-      else if (this.shiftPressed && event.key=="Tab")
-      {
-        //moving this section, so save the text first
-        this.saveContents(event.target);
-        this.emitKeyDownPress(event, 'shift_tab', this.section);
-      }
-      else if (this.shiftPressed && event.key=="Enter")
-      {
-        // console.log('shift enter');
-        this.emitKeyDownPress(event, 'shift_enter', this.section);
-        // Common.sleep(100).then(() => 
-        // {
-        //   setLastLineBreak(event.target, this);
-        // });          
-      }      
-      else if (!this.shiftPressed && event.key=="Enter")
-      {
-        if (event) event.preventDefault();
-        if (event) event.stopPropagation();  
-      }
-      else if (event.key=="Backspace")
-      {
-        var result = TextFormatter.DeleteNonContentEditable(event.target);
-        // console.log(result);
-        if (result)
-        {
-          event.preventDefault();
-        }
-        else
-        {
-          var src = event.target.innerText
-          if (src.trim()=="")
-          {
-            this.sectionIsDeleted=true;
-            this.emitKeyDownPress(event, 'backspace-blank-section', this.section);
-          }          
-        }
-      }  
     },    
     keyMonitor(event) 
     {  
@@ -1241,12 +1149,12 @@ export default
     {
       if (!this.inSearchMode())
       {
-        this.checkAndQueueDeltaChange(this);
-        this.setSectionHTML(target);
-        var tags = this.markTags(target, this.section.html, '#');
-        this.section.html = tags.html;
+        // this.checkAndQueueDeltaChange(this);
+        // this.setSectionHTML(target);
+        // var tags = this.markTags(target, this.section.html, '#');
+        // this.section.html = tags.html;
 
-        this.$emit('save-section');   
+        // this.$emit('save-section');   
 
         return true;
       }

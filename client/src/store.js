@@ -117,6 +117,7 @@ export const store = new Vuex.Store({
 	      var sendDoc=false;
 	      var url = Common.URLS.Operations;
 	      var result=null;
+	      var opErrors=[];
 	      
 	      while (queue.length>0)
 	      {
@@ -124,13 +125,16 @@ export const store = new Vuex.Store({
 	        
 	        if (OpsConfig.IgnoreOp(op)==false)
 	        {
+	        	console.log('sending op', op);
 	        	result = await Comms.post(url, op);
 	        	if (result==null)
 	        	{
 	        		console.log('There was an error applying OP ', op);
+	        		opErrors.push(op);
 	        	}
 	        }
 	      }
+	      return opErrors;
 	    },	
 	   //  async loadJots(state, payload)
 	   //  {
@@ -193,7 +197,7 @@ export const store = new Vuex.Store({
 		},		
 		queueOperation(state, operation)
 		{
-			console.log('adding server OP queue', operation);	
+			// console.log('adding server OP queue', operation);	
 			state.opsQueue.unshift(operation);	
 		},
 		setJotsList(state, jots)

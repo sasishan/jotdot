@@ -17,13 +17,13 @@
   <span v-if="isLoaded===true && showTags==false"> 
     <Notes_Breadcrumb :sectionsStack="breadCrumbs" :jot="getJot" :allowEdit=allowEdit class="mt-3"/>
     <transition name="slide-fade" mode="out-in" >
-      <h4 v-if="isSwitched==true" :contenteditable=allowEdit v-html="currentMainSection.text" class="mt-2"></h4>
+      <h4 v-if="isSwitched==true" :contenteditable=false v-html="currentMainSection.text" class="mt-2"></h4>
       <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
-      <h4 v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=allowEdit v-html="currentMainSection.text" class="mt-2"></h4>      
+      <h4 ref="titleSection" v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=false v-html="currentMainSection.text" class="mt-2" @blur="titleChanged(currentMainSection)"></h4>      
     </transition>
-    <draggable v-model="currentSelection" @end="dragEnd" :disabled="isMobile()" v-bind="dragOptions()" >
+    <draggable v-model="currentMainSection.sections" @end="dragEnd" :disabled="isMobile() || !allowEdit" v-bind="dragOptions()" >
       <transition-group name="list" tag="p" mode="out-in">
-        <Notes_Section v-for="(section, index) in currentSelection" 
+        <Notes_Section v-for="(section, index) in currentMainSection.sections" 
           :key="index" 
           :allowEdit=allowEdit
           :haveWritePermissions=haveDocWritePermissions
@@ -127,6 +127,11 @@ export default
     await this.initializeBreadCrumbsAndLoadSections();  
     this.initializeStartingSectionsList();    
   },
+  destroyed()
+  {
+    //flush the ops buffer
+    this.saveSections();
+  },
   computed: 
   {
     haveDocWritePermissions()
@@ -179,11 +184,11 @@ export default
     {
       return this.lastSaved.text;
     },
-    sectionsList()
-    {
-      return this.currentSelection;
-      // return this.$store.getters.getCurrentSelection;
-    },
+    // sectionsList()
+    // {
+    //   return this.currentSelection;
+    //   // return this.$store.getters.getCurrentSelection;
+    // },
     errorOccurred()
     {
       if (this.error=="")
@@ -210,22 +215,29 @@ export default
     {
       return this.visibleSelection;
     },
-    currentSelection:
-    {
-      get() 
-      {
-          return this.$store.getters.getCurrentSelection;
-      },
-      // need this mutation for fging
-      set(section) 
-      {
-          this.$store.commit('setCurrentSelection', section);
-          // this.$store.commit('setParentsCurrentSelection', section);
-      }
-    }
+    // currentSelection:
+    // {
+    //   get() 
+    //   {
+    //       return this.$store.getters.getCurrentSelection;
+    //   },
+    //   // need this mutation for fging
+    //   set(section) 
+    //   {
+    //       this.$store.commit('setCurrentSelection', section);
+    //       // this.$store.commit('setParentsCurrentSelection', section);
+    //   }
+    // }
   },    
   methods: 
   {
+    titleChanged(titleSection)
+    {
+      // console.log(titleSection, this.$refs.titleSection.innerHTML);
+      Operations.textChangeOp(this.$store, titleSection, this.$refs.titleSection.textContent, this.$refs.titleSection.innerHTML, titleSection.tag); 
+      titleSection.text = this.$refs.titleSection.textContent;
+      titleSection.html = this.$refs.titleSection.innerHTML;
+    },
     dragOptions()
     {
       return Common.DragOptions;
@@ -341,6 +353,7 @@ export default
       {
         if (this.$store.getters.getCurrentJotId!=jotId)
         {
+          console.log('1')
           this.$store.commit('clearStoredData');
           this.$store.commit('setCurrentJotId', jotId);
           var jot = await this.$store.dispatch('getOneJot', jotId);
@@ -460,15 +473,162 @@ export default
         this.setSection(section)
       }
       else
-      {
+      {        
         //load it from the root
         this.setSection(this.$store.getters.sectionsList);
       } 
     }, 
-    getPriorSection(parentSection, section)
+    getFirstVisibleChild(section)
     {
       // var prior;
-      // console.log('getPriorSection',parentSection.sections);
+      if (section.open && section.sections)
+      {
+        var children = section.sections;
+        var len = children.length;
+        for (var i=0; i<len; i++)
+        {
+          // if (children[i].open)
+          {
+            return children[i];
+          }
+          // else
+          // {
+          // }
+        }          
+      }
+
+      return null;
+    },
+    getNextVisibleSection(parentSection, section)
+    {
+      var below = this.getFirstVisibleChild(section);
+      if (below)
+      {
+        return below;
+      }
+      below = this.getNextSection(parentSection, section);
+
+      return below;
+    },
+    getNextSection(parentSection, section)
+    {
+      var below = this.getNextSectionInSameParent(parentSection, section);
+      if (below)
+      {
+        return below;
+      }
+      else
+      {
+        var grandParentSection = this.getSectionById([this.currentMainSection], parentSection.parentSection, false);
+        if (grandParentSection)
+        {
+          var visibleChild = this.getNextSection(grandParentSection, parentSection);
+          if (visibleChild)
+          {
+            below=visibleChild;
+          }          
+        }
+
+        return below;
+      }
+    },
+    getPriorVisibleSection(parentSection, section)
+    {
+      var above = this.getPriorSectionInSameParent(parentSection, section);
+      if (above==parentSection)
+      {
+        return above;
+      }
+      else
+      {
+        var visibleChild = this.getLastVisibleChild(above);
+        if (visibleChild)
+        {
+          above=visibleChild;
+        }
+        return above;
+      }
+    },
+    // getFirstVisibleBelow(section)
+    // {
+    //   // var prior;
+    //   if (section.open && section.sections)
+    //   {
+    //     var children = section.sections;
+    //     var len = children.length;
+    //     for (var i=len-1; i>=0; i--)
+    //     {
+    //       if (children[i].open)
+    //       {
+    //         var visible = this.getLastVisibleChild(children[i]);
+    //         if (visible)
+    //         {
+    //           return visible;
+    //         }
+    //         else
+    //         {
+    //           return children[i];  
+    //         }
+    //       }
+    //     }          
+    //   }
+
+    //   return null;
+    // },    
+    getLastVisibleChild(section)
+    {
+      // var prior;
+      if (section.open && section.sections)
+      {
+        var children = section.sections;
+        var len = children.length;
+        for (var i=len-1; i>=0; i--)
+        {
+          if (children[i].open)
+          {
+            var visible = this.getLastVisibleChild(children[i]);
+            if (visible)
+            {
+              return visible;
+            }
+            else
+            {
+              return children[i];  
+            }
+          }
+          else
+          {
+            return children[i];
+          }
+        }          
+      }
+
+      return null;
+    },
+    getNextSectionInSameParent(parentSection, section)
+    {
+      var len = parentSection.sections.length;
+      for (var i=0; i< len; i++)
+      {
+        if (parentSection.sections[i].id == section.id)
+        {
+          if (i>=(len-1))
+          {
+            return null; //its the last in the array
+          }
+          else
+          {
+            return parentSection.sections[i+1];
+          }
+        }
+        // prior = parentSection.sections[i];
+      }
+
+      return null;
+    },
+    getPriorSectionInSameParent(parentSection, section)
+    {
+      // var prior;
       for (var i=0; i< parentSection.sections.length; i++)
       {
         if (parentSection.sections[i].id == section.id)
@@ -528,7 +688,8 @@ export default
             }
           } 
         }
-      }      
+      }
+      return null;      
     },  
     resetBreadCrumbsStack()
     {
@@ -562,22 +723,26 @@ export default
     setSection(section)
     {      
       this.$store.commit('setCurrentMainSection', section); 
-      this.$store.commit('setCurrentSelection', section.sections); 
+      // this.$store.commit('setCurrentSelection', section.sections); 
     },      
     getDraggedSection(event)
     {
-      return (this.currentSelection[event.newIndex]);
+      return (this.currentMainSection.sections[event.newIndex]);
     },  
     dragEnd(event)
     {
       var draggedSection = this.getDraggedSection(event);
       var parentSection = this.getSectionById([this.currentMainSection], draggedSection.parentSection, false); 
 
+      // console.log('dragged', draggedSection, parentSection);
       Operations.dragSectionOp(this.$store, 
         draggedSection, 
         parentSection, 
         parentSection, 
         event.newIndex);
+      console.log((this.$store.getters.sectionsList));
+      console.log(draggedSection.parentSection);
+      // console.log('finish drag', draggedSection, parentSection, this.currentMainSection, this.currentSelection);
     },
     ////////////////////////////////
     // Save
@@ -647,6 +812,14 @@ export default
       {
         this.deleteBlankSection(section);
       }
+      else if (eventType==Common.KeyEventTypes.Down)
+      {
+        this.changeFocusDown(section);
+      }
+      else if (eventType==Common.KeyEventTypes.Up)
+      {
+        this.changeFocusUp(section);
+      }            
     },
     processEnterKey(section)
     {
@@ -660,7 +833,7 @@ export default
       var toSection={};
       var position =Common.APPEND_SECTION;
 
-      if (caretPosition==0)
+      if (caretPosition.caretOffset==0)
       {
         // addSection(store, toSectionArray, parentSection, atIndex=-1)
         // newSection = this.addSection(parentSection.sections, parentSection, index);
@@ -672,7 +845,7 @@ export default
       else if (this.currentFocusedSectionDepth==0)
       {
         // newSection = this.addSection(this.currentSelection, this.currentMainSection, index+1);
-        toSection=this.currentSelection;
+        toSection=this.currentMainSection.sections;
         parent =this.currentMainSection;
         position = index+1;
         // Operations.addSectionOp(this.$store, this.currentSelection, this.currentMainSection, index+1);   
@@ -713,7 +886,7 @@ export default
     {
       this.resetSave();
 
-      if (event.key=="Enter")
+      if (event.key==Common.Key_Enter)
       {
         this.processEnterKey(section);
       }      
@@ -721,11 +894,35 @@ export default
     ///////////////////////////////
     // OPERATIONS
     ///////////////////////////////
+    changeFocusDown(section)
+    {
+      var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
+
+      var below = this.getNextVisibleSection(parentSection, section);
+      if (below)
+      {
+        Vue.nextTick(() => {
+          document.getElementById(below.id).focus();
+        });         
+      }
+    },    
+    changeFocusUp(section)
+    {
+      var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
+
+      var above = this.getPriorVisibleSection(parentSection, section);
+      if (above)
+      {
+        Vue.nextTick(() => {
+          document.getElementById(above.id).focus();
+        });         
+      }
+    },
     addNewSection()
     {
       // this.addSection(this.currentSelection, this.currentMainSection);
-      var newSection  = this.addSection(this.currentSelection, this.currentMainSection, Common.APPEND_SECTION);
-      Operations.addSectionOp(this.$store, this.currentSelection, this.currentMainSection);
+      var newSection  = this.addSection(this.currentMainSection.sections, this.currentMainSection, Common.APPEND_SECTION);
+      Operations.addSectionOp(this.$store, newSection, this.currentMainSection, Common.APPEND_SECTION);
 
       Vue.nextTick(() => { 
         document.getElementById(newSection.id).focus();
@@ -735,7 +932,7 @@ export default
     moveSectionForwards(section)
     {
       var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
-      var priorSection = this.getPriorSection(parentSection, section);
+      var priorSection = this.getPriorSectionInSameParent(parentSection, section);
 
       if (parentSection.id==priorSection.id)
       {
@@ -761,7 +958,7 @@ export default
       if (sectionToDelete.sections.length==0)
       {
         var parentSection = this.getSectionById([this.currentMainSection], sectionToDelete.parentSection, false); 
-        var priorSection = this.getPriorSection(parentSection, sectionToDelete);
+        var priorSection = this.getPriorVisibleSection(parentSection, sectionToDelete);
 
         Operations.removeSectionOp(this.$store, sectionToDelete, parentSection);
 
@@ -801,15 +998,23 @@ export default
     },
     addSection(currentSection, parentSection, atIndex)
     {     
+
       var sectionId = this.getNewSectionId();
       var priorId = undefined;
-      var text =' ';
+      var initial = Common.InitialSectionHtml;
 
-      var item = {id: sectionId, text: text, html: "</br class='new'>", open: true, priorId: undefined, parentSection: parentSection.id, sections:[]};  
+      var item = {id: sectionId, 
+                  documentId: this.getJot.documentId,
+                  text: ' ', 
+                  html: '</br>', 
+                  open: true, 
+                  priorId: undefined, 
+                  parentSection: parentSection.id, 
+                  sections:[]};  
 
       if (atIndex>Common.APPEND_SECTION)
       {
-        currentSection = currentSection.splice(atIndex, 0, item);
+        currentSection.splice(atIndex, 0, item);
         // Vue.set(currentSection, atIndex, item)
       }
       else

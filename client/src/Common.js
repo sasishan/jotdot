@@ -22,6 +22,20 @@ Common.SearchPlaceholder="Search this jot..."
 
 Common.APPEND_SECTION = -1;
 
+Common.Key_Space = " ";
+Common.Key_Enter = "Enter";
+Common.Key_Hash = "#";
+Common.Key_Shift = "Shift";
+Common.Key_Up = "ArrowUp";
+Common.Key_Down = "ArrowDown";
+Common.Key_Control='Control';
+
+Common.MAX_UNDO_ITEMS = 20;
+
+Common.InitialSectionHtml = "</br>";
+
+Common.CharactersStopTagMarking = [Common.Key_Up, Common.Key_Down, Common.Key_Enter];
+
 Common.RootSectionId = '-1';
 Common.Fields = 
 {
@@ -70,6 +84,8 @@ Common.KeyEventTypes=
 {
     ShiftTab:'shift_tab',
     BackspaceBlankSection: 'backspace-blank-section',
+    Up: 'key-up',
+    Down: 'key-down'
 }
 
 
@@ -80,6 +96,7 @@ Common.GoToSection = function(documentId, sectionId, router)
 
 Common.GoToJots = function(router)
 {
+  console.log('j');
   router.push({name:'jots'});
 }
 

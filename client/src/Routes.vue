@@ -5,6 +5,7 @@ import Notes from './components/Notes.vue'
 import Jots from './components/Jots.vue'
 import SignIn from './components/Login.vue'
 import Tags from './components/Notes_Tags.vue'
+import Test from './components/Notes_Test.vue'
 // import Documents from './components/Documents.vue'
 
 const routes = [
@@ -18,6 +19,7 @@ const routes = [
     // { name: 'notesById', path: '/notes/:id', component: Notes, meta: { requiresAuth: true }, params: true},
     { name: 'notesbysearch', path: '/jots/:jotId/:sectionId?search=:query', component: Notes, meta: { requiresAuth: true }, params: true},
     { name: 'signin', path: '/signin', component: SignIn},
+    { name: 'test', path: '/test', component: Test, meta: { requiresAuth: true }},
     // { path: '/documents', component: Documents, meta: { requiresAuth: true }},
 ];
 

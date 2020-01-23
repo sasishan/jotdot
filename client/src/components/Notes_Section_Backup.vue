@@ -10,7 +10,7 @@
       <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true" @set-plain-text="convertToPlainText"/>      
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
-      <Notes_Flyout @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true"/>      
+      <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>
     <div 
       :id="getId"
@@ -27,13 +27,14 @@
       @input="inputText"
       @blur = "blurSection($event, section)"> 
     </div>
-   <draggable v-model="getSections" :disabled="isMobile()" @end="dragEnd"   >
+   <draggable v-model="getSections" :disabled="isMobile()" @end="dragEnd" v-bind="dragOptions()">
     <Notes_Section v-for="(section, index) in getSections" 
       :section="section" 
       :depth="depth+1" 
       :allowEdit=allowEdit
       :haveWritePermissions=haveWritePermissions
       :searchText = 'searchText'
+      :offset="0"
       v-if="(getOpenState) || allowEdit==false" 
       @save-section="emitSaveSection"
       @special-key-pressed="emitKeyPress"
@@ -56,6 +57,8 @@ import Common from '../Common.js';
 import { Auth } from 'aws-amplify';
 import Sections_Editor from '../components/Sections_Editor.vue';
 import draggable from 'vuedraggable';
+import TextFormatter from '../TextFormatter.js';
+import { uuid } from 'vue-uuid';
 
 function getCaretPosition(el)
 {
@@ -72,8 +75,36 @@ function getCaretPosition(el)
   return caretOffset;
 }
 
+function setLastLineBreak(element, self)
+{
+  var selection = window.getSelection();
+  console.log(selection);
+  var parent = selection.anchorNode;
+  console.log(parent);
+  // var range = document.createRange();
+  // var range = window.getSelection().getRangeAt(0);
+  var range = document.createRange();
+  // range.setEnd(element, selection.anchorOffset);
+  range.selectNodeContents(element);
+  var previousNode = range.cloneContents().lastChild;
+  
+  // console.log(previousNode.nodeValue, previousNode.nodeType, previousNode.nodeName, previousNode.outerText);
+  if (previousNode && previousNode.nodeName=='BR')
+  {
+    // var newLine = self.getNewLineElement();
+    // console.log(newLine);
+    // previousNode = newLine;
+    // previousNode.className="shiftEnter";
+    // parent.replaceChild(newLine, previousNode);
+    // console.log(previousNode);
+  }
+  // range.setEndBefore(selection.anchorNode);
+  // range.setStart(element, range.endOffset - 1);
+  // var previousNode = range.cloneContents().lastChild;
+  
+}
 
-function SetCaretPositionSpace(el) 
+function setCaretPositionSpace(el, self) 
 {
   var range = document.createRange();
   var sel = window.getSelection();
@@ -81,39 +112,51 @@ function SetCaretPositionSpace(el)
   var tagText = sel.focusNode.wholeText;
   var tags = tagText.split(" ");
 
+
   if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
   {
-    console.log('changing');
     var hashTagText = sel.anchorNode.parentNode;
     var tagContent = sel.anchorNode.parentNode.parentNode;
-    var newSpan = document.createElement('span');
-    newSpan.className = Common.HashTagTextClass;
-    newSpan.innerHTML = tags[0];
 
-    tagContent.replaceChild(newSpan, hashTagText);
+    var tagElement = self.getNewHashTagElement(tags[0]);
+    // var newSpan = document.createElement('span');
+    // newSpan.className = Common.HashTagTextClass;
+    // newSpan.innerHTML = tags[0];
+
+    tagContent.replaceChild(tagElement, hashTagText);
     if (tags.length>1)
     {
-      tagContent.after(" "+tags[1]);  
-    }
-    else if (!tagContent.nextSibling)
-    {
-      // console.log('no tag');
-      tagContent.after("\u200B");
-      // tagContent.nextSibling.after(" ");
-      // console.log('next sibling', tagContent.nextSibling);
-      // tagContent.nextSibling.after(" ");
+      tagElement.after(" "+tags[1]);  
     }
     else
     {
-      tagContent.after(" ");
-    }
+      tagElement.after(" ");    
+    }    
+    
+    // if (tags.length>1)
+    // {
+    //   tagContent.after(" "+tags[1]);  
+    // }
+    // else if (!tagContent.nextSibling)
+    // {
+    //   // console.log('no tag');
+    //   tagContent.after("\u200B");
+    //   // tagContent.nextSibling.after(" ");
+    //   // console.log('next sibling', tagContent.nextSibling);
+    //   // tagContent.nextSibling.after(" ");
+    // }
+    // else
+    // {
+    //   tagContent.after(" ");
+    // }
 
     // var range = document.createRange();
     // var sel = window.getSelection();
 
     // range.setStart(newSpan, 1);
-    range.setStart(tagContent.nextSibling, 1);
-    // range.collapse(false);  
+
+    range.setStart(tagElement.nextSibling, 1);
+    range.collapse(false);  
     
     sel.removeAllRanges();
     sel.addRange(range);
@@ -158,6 +201,7 @@ export default
 {
   name: 'Notes_Section',
   props: {
+    offset: {},
     section:{},
     depth: 0,
     allowEdit: {}, 
@@ -352,7 +396,7 @@ export default
     },
     sectionIndent()
     {
-      this.baseSectionStyle.left=this.sectionLeft+(this.depth*this.indentDelta)+'px';
+      this.baseSectionStyle.left=this.offset+this.sectionLeft+(this.depth*this.indentDelta)+'px';
 
       if (this.allowEdit==false)
       {
@@ -363,33 +407,33 @@ export default
     },
     menuIndent()
     {
-      this.baseMenuBulletStyle.left=this.menuBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseMenuBulletStyle.left=this.offset+this.menuBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseMenuBulletStyle;
     },
     archiveIndent()
     {
-      this.archiveBulletStyle.left=this.archiveBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.archiveBulletStyle.left=this.offset+this.archiveBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.archiveBulletStyle;
     },   
     formatIndent(offset)
     {
-      this.baseFormatBulletStyle.left=this.formatBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseFormatBulletStyle.left=this.offset+this.formatBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseFormatBulletStyle;
     },     
     formatNoUpIndent()
     {
       var offset=20;
-      this.baseFormatBulletStyle.left=(this.formatBulletLeft+offset)+(this.depth*this.indentDelta)+'px';
+      this.baseFormatBulletStyle.left=(this.offset+this.formatBulletLeft+offset)+(this.depth*this.indentDelta)+'px';
       return this.baseFormatBulletStyle;
     },
     upIndent()
     {
-      this.baseUpBulletStyle.left=this.upBulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseUpBulletStyle.left=this.offset+this.upBulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseUpBulletStyle;
     },
     bulletIndent() 
     {
-      this.baseBulletStyle.left=this.bulletLeft+(this.depth*this.indentDelta)+'px';
+      this.baseBulletStyle.left=this.offset+this.bulletLeft+(this.depth*this.indentDelta)+'px';
       return this.baseBulletStyle;
     }
   },
@@ -410,28 +454,32 @@ export default
   },
   methods:
   {
+    dragOptions()
+    {
+      return Common.DragOptions;
+    },    
     inputText()
     { 
       Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
     },
-    checkHighlightedText(event)
-    {
-      if (!this.selectedRange.empty)
-      {
-        var clientRectangles = this.selectedRange.getClientRects();
-        for(var i = 0 ; i < clientRectangles.length ; i++) {
-          if(event.pageX >= clientRectangles[i].left && event.pageX <= clientRectangles[i].right &&
-             event.pageY >= clientRectangles[i].top  && event.pageY <= clientRectangles[i].bottom
-            ) 
-          {
-            //show the pop up
-            console.log('Show menu');
-            break;
-          }
-        }
+    // checkHighlightedText(event)
+    // {
+    //   if (!this.selectedRange.empty)
+    //   {
+    //     var clientRectangles = this.selectedRange.getClientRects();
+    //     for(var i = 0 ; i < clientRectangles.length ; i++) {
+    //       if(event.pageX >= clientRectangles[i].left && event.pageX <= clientRectangles[i].right &&
+    //          event.pageY >= clientRectangles[i].top  && event.pageY <= clientRectangles[i].bottom
+    //         ) 
+    //       {
+    //         //show the pop up
+    //         console.log('Show menu');
+    //         break;
+    //       }
+    //     }
 
-      }
-    },
+    //   }
+    // },
     clearSelectedText()
     {
       if (window.getSelection) 
@@ -449,9 +497,12 @@ export default
     },
     getSelectedText(event) 
     {
+      if (window.getSelection().rangeCount==0)
+      {
+        return;
+      }
       this.selectedRange = window.getSelection().getRangeAt(0);
-      // console.log('getSelectedText',this.selectedRange);
-
+      
       this.selectedNode = this.selectedRange.commonAncestorContainer;  
       this.selectedBeginNode = this.selectedRange.startContainer;  
       this.selectedEndNode = this.selectedRange.endContainer;  
@@ -470,18 +521,22 @@ export default
       // console.log('getSelectedText', this.selectedNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       var el = event.target;
       el.focus();
+
+
     },
     selectText(begin, end, startPos, endPos) 
     {
+
       var range = document.createRange();
       var sel = window.getSelection();
       
-      // console.log('SELECT TEXT', node);
       range.setStart(begin, startPos);
       range.setEnd(end, endPos);
+
       // range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);      
+
         // Chrome / Firefox
         // console.log('selecttext',el.selectionStart);
         // if (typeof (el.selectionStart) != "undefined") 
@@ -520,7 +575,7 @@ export default
       var node = this.selectedNode;
 
       // var sel = window.getSelection();
-      console.log(sel);
+      // console.log(sel);
 //       if (this.selectedRange.startContainer==this.selectedRange.endContainer)
 //       {
 
@@ -546,13 +601,14 @@ export default
       
       el.focus(); 
 
-
       this.section.html= this.$refs.section_text.innerHTML;
       this.section.text= this.$refs.section_text.innerText;
     },
     formatText(event, type)
     {
-      // console.log('formatText',type, this.selectedNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
+      // console.log('selectedRange', this.selectedRange);
+      // var el = this.$refs.section_text;
+      // el.focus(); 
       this.selectText(this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       var start = this.selectedRange.startOffset;
       var end = this.selectedRange.endOffset;
@@ -561,7 +617,7 @@ export default
       // event.preventDefault();
       // event.stopPropagation();  
       // this.selectText(this.selectedRange.startOffset, this.selectedRange.endOffset);
-      // console.log(node);
+      // console.log('formatText',type, this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       document.execCommand(type , false , null);
 
       // console.log(this.selectedNode.parentNode);
@@ -663,30 +719,185 @@ export default
     },
     getTags(text, separator)
     {
-        var hashtags = text.match(Common.HashTagMatch);
+      var tags=[];
+      var tagElements = this.$refs.section_text.getElementsByClassName(Common.HashTagTextClass);
+      for (var i=0; i< tagElements.length; i++)
+      {
+        tags.push(tagElements[i].innerText);
+      }
+      // var result = str.match(/<b>(.*?)<\/b>/g).map(function(val){
+      //   return val.replace(/<\/?b>/g,'');
+      // });
 
-        var tags=[];
-        if (hashtags)
-        {
-          for (var i=0; i<hashtags.length; i++)
-          {
-            var t = hashtags[i].split(separator).filter(x => x);
-            if (t.length>0)
-            {
-              tags.push(t)
-            }
-            else
-            {
-              tags.push(hashtags[i])
-            }
-          }
-        }
-        return tags;
+      // console.log(root);
+      // var tags = [].map.call( root.querySelectorAll("hashTagText"), function(v)
+      // {
+      //   console.log(v);
+      //   return v.textContent || v.innerText || "";
+      // });      
+      // var hashtags = text.match(Common.HashTagMatch);
+
+      // var tags=[];
+      // if (hashtags)
+      // {
+      //   for (var i=0; i<hashtags.length; i++)
+      //   {
+      //     var t = hashtags[i].split(separator).filter(x => x);
+      //     if (t.length>0)
+      //     {
+      //       tags.push(t)
+      //     }
+      //     else
+      //     {
+      //       tags.push(hashtags[i])
+      //     }
+      //   }
+      // }
+      return tags;
+    },    
+    getNewLineElement()
+    {
+      var nl = document.createElement("div");
+      // var tagId = "tag_"+this.getNewTagId();
+      // nl.id = tagId;
+      nl.textContent="\n";
+      // hashTag.className =Common.HashTagTextClass;
+
+      return nl;
     },      
+    getNewHashTagElement(text="#")
+    {
+      var hashTag = document.createElement("span");
+      var tagId = "tag_"+this.getNewTagId();
+      hashTag.id = tagId;
+      hashTag.textContent=text;
+      hashTag.className =Common.HashTagTextClass;
+
+      return hashTag;
+    },
+    // insertHashtagAt(node)
+    // {
+    //   var nodeText = node.node.wholeText;
+    //   var atOffset = node.offset;
+
+    //   var range = document.createRange();
+    //   var sel = window.getSelection();
+      
+    //   var tagText = sel.focusNode.wholeText;
+    //   var startText = tagText.substring(1, atOffset);
+    //   var endText = tagText.substring(atOffset, tagText.length);
+
+    //   if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
+    //   {
+    //     var hashTagText = sel.anchorNode.parentNode;
+    //     var tagContent = sel.anchorNode.parentNode.parentNode;
+    //     var newSpan = document.createElement('span');
+    //     newSpan.className = Common.HashTagTextClass;
+    //     newSpan.innerHTML = tags[0];
+
+    //     tagContent.replaceChild(newSpan, hashTagText);
+    //     if (tags.length>1)
+    //     {
+    //       tagContent.after(" "+tags[1]);  
+    //     }
+    //     else if (!tagContent.nextSibling)
+    //     {
+    //       // console.log('no tag');
+    //       tagContent.after("\u200B");
+    //       // tagContent.nextSibling.after(" ");
+    //       // console.log('next sibling', tagContent.nextSibling);
+    //       // tagContent.nextSibling.after(" ");
+    //     }
+    //     else
+    //     {
+    //       tagContent.after(" ");
+    //     }
+
+    //     // var range = document.createRange();
+    //     // var sel = window.getSelection();
+
+    //     // range.setStart(newSpan, 1);
+    //     range.setStart(tagContent.nextSibling, 1);
+    //     // range.collapse(false);  
+        
+    //     sel.removeAllRanges();
+    //     sel.addRange(range);
+    //     el.focus();      
+
+    //     var next = tagContent.nextSibling;
+    //     // tagContent.appendChild(newSpan);
+    //     // parentNode.after("A");
+    //     // parentNode.insertAfter('&nbsp;', el);
+    //   }
+    // },
+    startHashTag()
+    {
+      var currentNode = TextFormatter.getCurrentNode();
+      // var currentNode = TextFormatter.getCaretPos();
+
+      var hashTag = this.getNewHashTagElement();
+      // TextFormatter.insertHashtagAt(currentNode);
+      currentNode.parentNode.appendChild(hashTag);
+      TextFormatter.setCaretToEndOfElementById(hashTag.id)
+      // hashTag.focus();    
+      
+    },
+    removeTrailingLinebreak(element) 
+    {
+        let children = Array.from(element.childNodes)
+
+        children.forEach(child => {
+          console.log(child);
+            if (child.className==Common.HashTagTextClass)
+            {
+              console.log('found tag');
+              let kids = Array.from(child.childNodes);
+              kids.forEach(kid => {
+                console.log('kid', kid);
+                if (kid.tagName && kid.tagName === "BR") {
+                  console.log('removing kid');
+                    child.removeChild(kid)
+                }                
+              });
+            }
+          });            
+    }, 
+    markHtml(element, makeEditable='false')
+    {
+      var hrefElements = element.getElementsByTagName("a");
+      // console.log(hrefElements);
+      if (hrefElements)
+      {
+        for (var i=0; i<hrefElements.length; i++)
+        {
+          hrefElements[i].setAttribute('target', '_blank');
+          hrefElements[i].setAttribute('contenteditable', makeEditable);
+          // hrefElements[i].after('-');
+        }
+      }
+      return
+    },
     markTags(element, html, separator) 
     {
       var whiteSpace = "&#8203;"; 
+      // var childs = element.childNodes;
 
+      // for (var i = 0; i < childs.length; i++) 
+      // {
+      //   if (childs[i].className==Common.TagContentClass)
+      //   {
+      //     continue;
+      //   }
+      //   console.log(childs[i].innerHTML); 
+      //   if (childs[i].innerHTML)
+      //   {
+      //     childs[i].innerHTML = childs[i].innerHTML.replace(/#(\w+)/g,
+      //     " <span class='" + Common.TagContentClass + "'><span class='" +
+      //     Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
+      //     // console.log(childs[i].textContent);          
+      //   }
+
+      // }
       // console.log('before',html);
       // (?<!y)x
       ///\s#(\S*)/g,
@@ -701,18 +912,49 @@ export default
       // html = html.replace(/\s#(\S*)/g,
       //   " <span class='" + Common.TagContentClass + "'><span class='" +
       //   Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
-      html = html.replace("<br>#", "<br> #");
+      
+      // html = html.replace("<br>#", "<br> #");
+      // html = html.replace(/\u00A0/g, '');
 
-      // console.log('mid',html);
+      // this.markHtml(element, 'false'); 
 
+      html = html.replace(/&nbsp;/g, ' ');
+      // html = html.replace('<br>', ' '); //for firefox only
+      // console.log('replace br', html);
+      // this.removeTrailingLinebreak(element);
+      var tagId = "tag_"+this.getNewTagId();
       html = html.replace(/\s#(\S*)/g,
-        " <span class='" + Common.TagContentClass + "'><span class='" +
-        Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
+        " <span id='"+tagId+"' contenteditable='false' class='" + Common.HashTagTextClass + "'>#$1</span>"+whiteSpace);
+      // html = html.replace(/#(\w+)/g,
+      //   " <span class='" + Common.TagContentClass + "'><span class='" +
+      //   Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
+      // var hash= "<span class='hashGrey'>#</span>";
+      // var tagId = "tag_"+this.getNewTagId();
+      // html = html.replace(/#(\w+)/g, 
+      //         hash+"<span id='"+tagId+"' class='" + Common.HashTagTextClass + "'>$1</span>"+ whiteSpace);
 
-      this.setTagClick();
+
+      //Contentnoteditable
+      // var hash= "<span class='hashGrey'>#</span>";
+      // var tagId = "tag_"+this.getNewTagId();
+      // html = html.replace(/#(\w+)/g, 
+      //         "<span id='"+tagId+"' contenteditable='false' class='" + Common.HashTagTextClass + "'>$1</span> ");
+
+
+      // html = html.replace(/(^|\s)(#[a-z\d-]+)/ig,
+      //   "$1<span class='" +
+      //   Common.HashTagTextClass + "'>$2</span>"+ whiteSpace);
+      
+
+      
       // console.log('after',html);
-      return html;
+      return { html: html, tagId: tagId};
     },  
+    getNewTagId()
+    {
+        var id = uuid.v4();
+        return id;
+    },
     searchTag(text)
     {
       console.log(text);
@@ -834,47 +1076,80 @@ export default
     keyDownMonitor(event)
     {
       this.resetSearchText();
-
-      if (event.key==" " && this.tagStarted)
+      // console.log('keydown', event.target.innerHTML);  
+      if (event.key==" ")
       {
-        // console.log('keyDownMonitor', 'tagEnded');
-        this.endMarking();
-
-        var position = getCaretPosition(event.target);
-
-        event.target.innerHTML = this.markTags(event.target, event.target.innerHTML, '#');        
-        Common.SetCaretPositionEndOfTag(event.target, position);
-
-        event.target.innerHTML +=" ";
-        Common.SetCaretPositionEndOfTag(event.target, position);
-      }
-      else if (event.key==" ")
-      {
-        // event.preventDefault();
-        // event.stopPropagation();  
-
-        // event.target.insertAdjacentHTML('beforeend', '&nbsp;');
-        // var sel = window.getSelection();
-
-        // if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
-        // {
-
-
-        // }
-        // // this.markTags(event.target, event.target.innerHTML, '#'); 
-        Common.sleep(100).then(() => 
+        if (this.tagStarted)
         {
-          SetCaretPositionSpace(event.target);
-        });          
-        
-        // var position = SetCaretPositionEndOfTag(event.target);
+          this.endMarking();
+          var tags = this.markTags(event.target, event.target.innerHTML, '#'); 
+          // console.log(tags);
+          event.target.innerHTML = tags.html;   
 
-        // event.target.innerHTML +="&nbsp;";
-        // Common.SetCaretPositionEndOfTag(event.target, position);
+          this.removeTrailingLinebreak(event.target);
+          TextFormatter.setCaretToEndOfElementById(tags.tagId);
+
+          this.setTagClick();
+
+          // var position = TextFormatter.getCaretPosition(event.target);
+          // console.log(position);
+          // event.target.innerHTML[position.caretOffset]='A';
+          // console.log(position);
+
+ 
+          // TextFormatter.SetCaretPositionEndOfTag(event.target, Common.HashTagTextClass);
+
+          // var text = document.createTextNode(" ");
+          // document.getElementById(tags.tagId).appendChild(text);
+          
+          // TextFormatter.setStartOrEndOfElement(text, false);;
+          // TextFormatter.setCaretPos(event.target, position);
+          // TextFormatter.setCaretPosition(event.target, position);
+
+
+          // TextFormatter.SetCaretPositionEndOfTag(event.target, Common.HashTagTextClass);
+        }
+        else
+        {
+          Common.sleep(100).then(() => 
+          {
+            // setCaretPositionSpace(event.target, this);
+          });            
+        }
+        // this.removeTrailingLinebreak(event.target);
+
       }
+      // else if (event.key==" ")
+      // {
+      //   console.log('space');
+      //   // event.preventDefault();
+      //   // event.stopPropagation();  
+
+      //   // event.target.insertAdjacentHTML('beforeend', '&nbsp;');
+      //   // var sel = window.getSelection();
+
+      //   // if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
+      //   // {
+
+
+      //   // }
+      //   // // this.markTags(event.target, event.target.innerHTML, '#'); 
+      //   Common.sleep(100).then(() => 
+      //   {
+      //     SetCaretPositionSpace(event.target);
+      //   });          
+        
+      //   // var position = SetCaretPositionEndOfTag(event.target);
+
+      //   // event.target.innerHTML +="&nbsp;";
+      //   // Common.SetCaretPositionEndOfTag(event.target, position);
+      // }
       else if (event.key=="#" )
-      {        
+      {   
+        // event.preventDefault();
+        // event.stopPropagation();          
         this.startMarking();
+        // this.startHashTag();
       }
       else if (event.key=="Shift" )
       {        
@@ -894,7 +1169,12 @@ export default
       }
       else if (this.shiftPressed && event.key=="Enter")
       {
+        // console.log('shift enter');
         this.emitKeyDownPress(event, 'shift_enter', this.section);
+        // Common.sleep(100).then(() => 
+        // {
+        //   setLastLineBreak(event.target, this);
+        // });          
       }      
       else if (!this.shiftPressed && event.key=="Enter")
       {
@@ -903,11 +1183,20 @@ export default
       }
       else if (event.key=="Backspace")
       {
-        var src = event.target.innerText
-        if (src.trim()=="")
+        var result = TextFormatter.DeleteNonContentEditable(event.target);
+        // console.log(result);
+        if (result)
         {
-          this.sectionIsDeleted=true;
-          this.emitKeyDownPress(event, 'backspace-blank-section', this.section);
+          event.preventDefault();
+        }
+        else
+        {
+          var src = event.target.innerText
+          if (src.trim()=="")
+          {
+            this.sectionIsDeleted=true;
+            this.emitKeyDownPress(event, 'backspace-blank-section', this.section);
+          }          
         }
       }  
     },    
@@ -937,6 +1226,7 @@ export default
       {
         if (this.sectionIsDeleted==false)
         {
+          // this.markHtml(event.target, 'false'); 
           this.saveContents(event.target);  
           this.$emit('section-in-blur', event, this.section, this.depth);
         }
@@ -953,7 +1243,9 @@ export default
       {
         this.checkAndQueueDeltaChange(this);
         this.setSectionHTML(target);
-        this.section.html = this.markTags(target, this.section.html, '#');
+        var tags = this.markTags(target, this.section.html, '#');
+        this.section.html = tags.html;
+
         this.$emit('save-section');   
 
         return true;
@@ -969,6 +1261,8 @@ export default
     },
     sectionInFocus(event, section, depth) //when a focus signal is received, pass it up the chain
     {
+      // this.markHtml(event.target, 'true'); 
+      // event.target.innerHTML+=" ";
       //percolate a section in focus up the parents
       this.$emit('section-in-focus', event, section, depth);
     },
@@ -1001,7 +1295,7 @@ export default
     getDraggedSection(event)
     {
       return (this.section.sections[event.newIndex]);
-    },  
+    },      
     dragEnd(event)
     {
       var draggedSection = this.getDraggedSection(event);
@@ -1016,7 +1310,7 @@ export default
     isMobile()
     {
       return Common.isMobile();
-    }
+    },   
   }
 }
 
@@ -1025,6 +1319,9 @@ export default
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style>
 
+a {
+  cursor: pointer;
+}
 
 content {
   border: 0;
@@ -1044,6 +1341,7 @@ content {
 {
   border-left:1px solid;
 }
+
 .section_content
 {
   text-align: left; 
@@ -1059,6 +1357,9 @@ content {
   user-select: text;
 }
 
+.hashGrey {
+  color: grey;
+}
 .hashTagText {
     color: grey;
     font-size: 0.9em;

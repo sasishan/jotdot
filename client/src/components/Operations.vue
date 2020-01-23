@@ -71,6 +71,7 @@ export default
 	moveSectionOps(store, sectionToMove, fromParent, newParent)
 	{
 		this.removeExistingSection(sectionToMove, fromParent);
+		
 		//debounce
         Common.sleep(5).then(() => {
           this.addExistingSection(sectionToMove, newParent);
@@ -189,7 +190,11 @@ export default
     },    
     saveOperations(store)
     {
-    	store.dispatch('saveOperations');
+    	var errors = store.dispatch('saveOperations');
+    	if (errors.length>0)
+		{
+			console.log('Errors saving: ', errors);
+		}
     },
     addExistingSection(existingSection, toNewParentSection)
     {
