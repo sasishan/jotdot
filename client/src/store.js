@@ -30,10 +30,13 @@ export const store = new Vuex.Store({
 		currentSelection:[],
 		lastAddedSection:{},
 		jotsList:[],
-		currentDocumentId: '125',
+		currentDocumentId: '0',
 		opsQueue:[],
 		searchText:"",
-
+		formattingInProgress:false,
+		formattingSectionId:'',
+		currentFocusSectionId:'',
+		currentOpenSectionMenuId:null,
 		//Notes
 		masterSection: 
 		{ 
@@ -107,7 +110,20 @@ export const store = new Vuex.Store({
 		getSearchText(state)
 		{
 			return (state.searchText);
-		}
+		},
+	    getIsFormattingInProgress(state)
+	    {
+	  		return {inProgress: state.formattingInProgress, sectionId: state.formattingSectionId};
+	    },		
+	    getCurrentFocusSectionId(state)
+	    {
+	    	return state.currentFocusSectionId;
+	    },
+	    getCurrentOpenSectionMenuId(state)
+	    {
+	    	return state.currentOpenSectionMenuId;
+	    }        
+
 	},
 	actions:
 	{
@@ -149,36 +165,44 @@ export const store = new Vuex.Store({
 		  // return false;
 
 	   //  },	
-	    async getOneJot(state, jotId)
+	    async getOneJotsPermissions(state, jotId)
 	    {
 	   		if (jotId)
 	   		{
 				var url = Common.URLS.OneJot + jotId;
-				var jot = await Comms.get(url);
+				var jot = await Comms.get(url).catch((error) => 
+				{ 
+					// console.error(error); 
+					return {error: error, jot: null};
+				});
 
 				if (jot && jot.length>0)
 				{
 					state.commit('setCurrentJot',  jot[0]);
-				  	return jot[0];
+				  	return {error: null, jot: jot[0]};
 				}	   			
 	   		}
 
-			return null;
+			return {error: 'No jot Id', jot: null};
 	    },
-		async loadSection(state, payload)
+		async loadJotsSections(state, jotId)
 		{
-			if (state.getters.getCurrentJotId)
+			if (jotId)
 			{
-				var url = Common.URLS.Documents + state.getters.getCurrentJotId;
-				var items = await Comms.get(url);
+				var url = Common.URLS.Documents + jotId;
+				var items = await Comms.get(url).catch((error) => 
+				{ 
+					// console.error(error); 
+					return {error: error, sections: null};
+				});
 				if (items)
 				{
 				  state.commit('initializeSection',  items);
 				  state.isLoaded = true;	
-				  return true;	  	
+				  return {error: null, sections: items};;	  	
 				}
 			}
-			return false;
+			return {error: 'No section Id', sections: null};
 		}, 
 		clearStore(state)
 		{
@@ -187,6 +211,27 @@ export const store = new Vuex.Store({
 	},
 	mutations:
 	{
+	    setCurrentOpenSectionMenuId(state, sectionId)
+	    {
+	    	state.currentOpenSectionMenuId = sectionId;
+	    },		
+		setSectionInFocus(state, sectionId)
+		{
+			state.currentFocusSectionId=sectionId;
+		},
+	    setFormattingStarted(state, sectionId)
+	    {
+	      state.formattingInProgress=true;
+	      state.formattingSectionId=sectionId;
+	    },
+	    setFormattingEnded(state, sectionId)
+	    {
+	      	if (sectionId == state.formattingSectionId)
+	      	{
+	      		state.formattingSectionId=-1;
+	      		state.formattingInProgress=false;
+	      	}
+	    },		
 		clearTriggetTextChange(state)
 		{
 			state.triggerTextChange = false;

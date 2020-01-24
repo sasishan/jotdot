@@ -188,13 +188,15 @@ export default
 			console.log(e);
 		}
     },    
-    saveOperations(store)
+    async saveOperations(store, callback)
     {
-    	var errors = store.dispatch('saveOperations');
+    	var errors = await store.dispatch('saveOperations');
     	if (errors.length>0)
 		{
-			console.log('Errors saving: ', errors);
+			// console.log('Errors saving: ', errors);
+			return callback(errors, null);
 		}
+		return callback(null, 'success');
     },
     addExistingSection(existingSection, toNewParentSection)
     {

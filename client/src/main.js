@@ -15,7 +15,7 @@ import sanitizeHTML from 'sanitize-html';
 
 // import moment from 'moment';
 import {faSquare, faArrowCircleRight, faCircle, faAngleUp, faCog, faHashtag,
-        faAngleDown, faTrashAlt, faSpinner, faEdit, faPrint, faArchive, faEllipsisH} from '@fortawesome/free-solid-svg-icons';
+        faAngleDown, faTrashAlt, faSpinner, faEdit, faPrint, faArchive, faEllipsisH, faTimes} from '@fortawesome/free-solid-svg-icons';
 // import awsmobile from './aws-exports'
 
 const awsconfig = {
@@ -101,7 +101,7 @@ if (token)
 
 Vue.prototype.$sanitize = sanitizeHTML;
 
-library.add(faEdit, faSquare, faArrowCircleRight, faCircle, faAngleUp, faAngleDown, faTrashAlt, faSpinner, faPrint, faCog, faHashtag, faArchive, faEllipsisH);
+library.add(faEdit, faSquare, faArrowCircleRight, faCircle, faAngleUp, faAngleDown, faTrashAlt, faSpinner, faPrint, faCog, faHashtag, faArchive, faEllipsisH, faTimes);
 Vue.component('font-awesome-icon', FontAwesomeIcon)
 
 Vue.use(BootstrapVue)

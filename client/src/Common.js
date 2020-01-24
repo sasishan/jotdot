@@ -54,6 +54,7 @@ Common.Messages =
     TagSearch: 'Tags',
     DeleteJot: 'Delete Jot',
     CouldNotLoad: "Could not load the contents of this Jot. Please check your permissions and try again.",
+    CouldNotSync: "There was an error syncing the data. Please check your internet connection and refresh the page.",
     DeleteCancelledMessage:'Delete was cancelled',
     DeleteCancelledMessageNotMatching: "Delete was cancelled as entered text did not match",
     DeleteErrorMessage: "There was an error deleting the Jot. Please try again.",

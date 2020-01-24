@@ -5,16 +5,18 @@
     size="xs" 
     :style="getStyle" 
     @mouseover="hover = true;" 
-    @mouseleave="click==false? hover = false : hover = true;"
-    @click="click = !click"/>
+    @mouseleave="showSectionMenu==false ? hover = false : hover = true;"
+    @click="emitClick"
+    />
 
-    <div v-if="click" class="menu">
+    <div v-if="showSectionMenu" class="menu">
       <div @click="" class="menuOption">Share...</div>
       <hr>
       <div @click="" class="menuOption">Copy to New Jot</div>
       <div @click="" class="menuOption">Copy to Clipboard</div>
       <hr>
       <div @click="clickSetToPlainText" class="menuOption">Make Plain text</div>
+      <div @click="clickUndo" :class="undoLength>0 ? 'menuOption' : 'menuOptionDisabled'">Undo Last</div>
     </div>
 
   </div>
@@ -26,16 +28,18 @@ import Vue from 'vue';
 
 export default 
 {
-  name: 'Notes_Up',
+  name: 'Notes_Menu',
   props: {
-    open: true
+    undoLength:0,
+    showSectionMenu: false
   },
   data: function() 
   {
     return { 
       showMenu:true,
       hover:false, 
-      click:false
+      click:false,
+      open:false      
     }
   },
   computed: 
@@ -53,22 +57,30 @@ export default
     },
     getIcon()
     {
-      if (this.open)
+      if (!this.showSectionMenu)
       {
         return ['fas', 'ellipsis-h']
       }
       else
       {
-        return ['fas', 'ellipsis-h']
+        return ['fas', 'times']
       }
     }
   },
   methods:
   {
+    emitClick(event)
+    {
+      this.$emit('click-section', event);
+    },
     clickSetToPlainText(event)
     {      
       this.$emit('set-plain-text', event);
-    }     
+    },
+    clickUndo()
+    {
+      this.$emit('undoLast', event);
+    },
   }
 }
 
@@ -89,12 +101,14 @@ hr {
 .menu {
     position: absolute;
     background-color: #1976d2;
-    min-width: 160px;
+    min-width: 140px;
     border-radius: 5px;
     padding-top: 4px;
     padding-bottom: 4px;
     border: 1px solid #1976d2;
     z-index: 1000;
+    right: 0;
+    left: auto;    
 }
 
 
@@ -105,12 +119,18 @@ hr {
   color: black;
 }
 
-.menuOption {
+.menuOption, .menuOptionDisabled {
   display: block;
   font-size: 0.8em;
   padding: 2px 10px;
   cursor: pointer;
   color: white;
+}
+
+.menuOptionDisabled
+{
+  color: #BBB;
+  cursor: default;
 }
 
 </style>

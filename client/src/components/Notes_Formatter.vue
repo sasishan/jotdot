@@ -1,9 +1,10 @@
 <template>
   <div >  
     <!--b-button size="sm" class="mr-1" variant="outline-primary" @click="formatPlainText($event)">P</b-button-->
-    <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'bold')"><b>B</b></b-button>
-    <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'italic')"><i>I</i></b></b-button>
-    <b-button size="sm" variant="outline-primary" @click="formatText($event, 'strikeThrough')"><s>S</s></b></b-button>
+    <!--b-button size="sm" class="mr-1" variant="outline-primary" @click="undoEvent($event)" :disabled="undoLength==0"><</b-button-->    
+    <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'bold')" :disabled="!showFormatting"><b>B</b></b-button>
+    <b-button size="sm" class="mr-1" variant="outline-primary" @click="formatText($event, 'italic')" :disabled="!showFormatting"><i>I</i></b></b-button>
+    <b-button size="sm" variant="outline-primary" @click="formatText($event, 'strikeThrough')" :disabled="!showFormatting"><s>S</s></b></b-button>
   </div>
 
 </template>
@@ -14,9 +15,12 @@ import Common from '../Common.js';
 
 export default 
 {
-  name: 'Notes_Formatted',
+  name: 'Notes_Formatter',
   props: {
-    open: true
+    open: true, 
+    section: {},
+    undoLength:0,
+    showFormatting:false
   },
   data: function() 
   {
@@ -53,8 +57,17 @@ export default
   },
   methods:
   {
+    startFormatting()
+    {
+      this.$store.commit('setFormattingStarted', this.section.id);
+    },
+    undoEvent()
+    {
+      this.$emit('undoLast', event);
+    },
     formatPlainText(event)
     {
+      this.startFormatting();
       this.$emit('format-plain-text', event);
       event.preventDefault();
       event.stopPropagation();       
@@ -62,6 +75,7 @@ export default
     },
     formatText(event, type)
     {
+      this.startFormatting();
       this.emitFormatText(event, type);
               event.preventDefault();
         event.stopPropagation();       
@@ -69,12 +83,9 @@ export default
     },
     emitFormatText(event, type)
     {
+      this.startFormatting();
       this.$emit('format-text', event, type);
-    },
-    clickUpDown(event)
-    {      
-      this.$emit('updown-click', event);
-    }     
+    },     
   }
 }
 

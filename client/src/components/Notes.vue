@@ -353,15 +353,14 @@ export default
       {
         if (this.$store.getters.getCurrentJotId!=jotId)
         {
-          console.log('1')
           this.$store.commit('clearStoredData');
           this.$store.commit('setCurrentJotId', jotId);
-          var jot = await this.$store.dispatch('getOneJot', jotId);
+          await this.$store.dispatch('getOneJotsPermissions', jotId);
         }        
       }
       else
       {
-        this.setError();
+        this.setError(Common.Messages.CouldNotLoad);
       }
     },
     initializeStartingSectionsList()
@@ -413,8 +412,10 @@ export default
     ////////////////////////////////
     async loadSections()
     {      
-      var loaded = await this.$store.dispatch('loadSection');
-      if (loaded)
+      var jotId = this.$store.getters.getCurrentJotId;
+
+      var loaded = await this.$store.dispatch('loadJotsSections', jotId);
+      if (loaded.error==null)
       {
         this.showData=true;
         this.$store.commit('setIsLoaded', true);
@@ -423,13 +424,13 @@ export default
       }
       else
       {
-        this.setError();
+        this.setError(Common.Messages.CouldNotLoad);
         return false;
       }
     },    
-    setError()
+    setError(errorMessage)
     {
-      this.error = Common.Messages.CouldNotLoad;
+      this.error = errorMessage;
     },
     resetError()
     {
@@ -750,7 +751,16 @@ export default
     saveSections()
     {
       // this.$store.dispatch('saveOperations');
-      Operations.saveOperations(this.$store);
+      var self = this;
+      Operations.saveOperations(this.$store, function(errors, results)
+      {
+        if (errors)
+        {
+          console.log(errors);
+          self.setError(Common.Messages.CouldNotSync);
+          // this.error="An error occurred syncing data. Please refresh the page.";
+        }      
+      });
     },
     isSaved()
     {
@@ -978,6 +988,7 @@ export default
     //Identiy which section is in focus and it's depth
     sectionInFocus(event, section, depth)
     {  
+      this.$store.commit('setSectionInFocus', section.id);
       this.currentFocusedSection=section;
       this.currentFocusedSectionDepth=depth;
     },

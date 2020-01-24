@@ -1,5 +1,8 @@
 <template>
 <div >
+  <span v-if="errorOccurred===true">
+    <h6 class="text-danger mt-5">{{error}}</h6>
+  </span>
   <span v-if="isLoaded===false">
     {{loadingMessage}} <font-awesome-icon size="lg" icon="spinner" class="fa-spin" />
   </span>
@@ -61,10 +64,36 @@ export default
   async mounted()
   {
     this.$store.commit('clearStoredData');
-    this.jotsLoaded = await this.loadJots();
+    var response = await this.loadJots();
+    console.log(response)
+    if (response.error)
+    {
+      this.jotsLoaded= true;
+      this.setError(Common.Messages.CouldNotLoad);
+    }
+    else
+    {
+      this.jotsLoaded= true;
+    }
   },
   methods: 
   {
+    errorOccurred()
+    {
+      if (this.error=="")
+      {
+        return false;
+      }
+      return true;
+    },
+    setError(errorMessage)
+    {
+      this.error = errorMessage;
+    },
+    resetError()
+    {
+      this.error="";
+    },
     openJot(jot)
     { 
       this.$router.push({name:'jotsById',  params: { jotId: jot.documentId } });
@@ -73,14 +102,19 @@ export default
     {
       // await this.$store.dispatch('loadJots');
       var url = Common.URLS.Documents;
-      var item = await Comms.get(url);
+      var item = await Comms.get(url).catch((error) => 
+      { 
+        return {error: error, jots: null};
+      });
 
+      console.log('item',item);
       if (item)
       {
         this.$store.commit('initializeJots',  item);
-        return true;
+        return {error: null, jots: item};
       }
-      return false;      
+
+      return {error: null, jots: []};
     },
     getJotPermissions(jot)
     {
@@ -125,6 +159,7 @@ export default
   },
   data() { 
     return {
+      error: '',
       jotsLoaded:false,
       compareAttribute:'lastUpdated'
     }

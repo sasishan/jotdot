@@ -1,17 +1,31 @@
 <template>
   <div >
     <span :style="getSectionsLength>0 ? formatIndent : formatNoUpIndent" v-if="showFormatMenu && allowEdit==true" >
-      <Notes_Formatter @format-text="formatText" />             
+      <Notes_Formatter 
+        @format-text="formatText"         
+        :section="section" 
+        :showFormatting="formattingInProgress"
+        :undoLength="getUndo().length"/>             
     </span>     
     <span :style="upIndent" v-if="getSectionsLength>0 && allowEdit==true" >
       <Notes_Up @updown-click="openCloseSection" :open="getOpenState" />        
     </span>  
      <span :style="getSectionsLength>0 ? menuIndent :  upIndent" v-if="allowEdit==true">
-      <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true" @set-plain-text="convertToPlainText"/>      
+      <Notes_Menu 
+        @click-section="clickShowSectionMenu"
+        :sectionId="getId" 
+        :undoLength="getUndo().length"
+        v-if="allowEdit==true" 
+        @set-plain-text="convertToPlainText"
+        @undoLast="undoLast()"
+        :showSectionMenu="showSectionMenu"/>      
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>
+    <!--TipTap 
+      :style="sectionIndent" 
+      :sectionContent="getSectionContent" /-->
     <div 
       :id="getId"
       ref="section_text"         
@@ -62,6 +76,7 @@ import draggable from 'vuedraggable';
 import TextFormatter from '../TextFormatter.js';
 import { uuid } from 'vue-uuid';
 import sanitizeHTML from 'sanitize-html';
+import TipTap from '../components/TipTap';
 
 export default 
 {
@@ -81,7 +96,8 @@ export default
     Notes_Menu,
     Sections_Editor,
     Notes_Formatter,
-    draggable,  
+    draggable, 
+    TipTap 
   },
   mounted()
   {
@@ -98,6 +114,9 @@ export default
       sectionHtml:{}, 
       sectionText:{},
       tagText:'',
+      formattingInProgress:false,
+
+      menuSelected:false,
 
       lastOffsetY: 0,
       tagStarted:false,
@@ -112,13 +131,13 @@ export default
       bulletLeft: 30,
       menuBulletLeft: 0,
 
-      indentDelta:50,
+      indentDelta: 40,
       lineHeight: '2',
       shiftPressed: false,
       sectionIsDeleted:false,
       selectedRange:{ empty:true},
       selectedNode:{},
-      showFormatMenu:false,
+      // showFormatMenu:false,
       selectedBeginNode:null,
       selectedEndNode:null,
 
@@ -181,6 +200,24 @@ export default
   },
   computed: 
   {
+    showSectionMenu()
+    {
+      // console.log(this.$store.getters.getCurrentOpenSectionMenuId, this.section.id);
+
+      if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
+      {
+        return true;
+      }
+      return false;
+    },
+    showFormatMenu()
+    {
+      if (this.isFormattingInProgress() && this.$store.getters.getCurrentFocusSectionId==this.section.id)
+      {
+        return true;
+      }
+      return false;
+    },
     getSectionContent()
     {
       var content="";
@@ -217,10 +254,11 @@ export default
       content = 
         this.$sanitize(content, 
         {
-          allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'span', 'table']),
+          allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
           allowedAttributes:
           {
-            'span': ['contenteditable']
+            'span': ['contenteditable'], 
+            'a':['href']
           },
           // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
           allowedClasses:{
@@ -395,6 +433,19 @@ export default
 
     //   return true;
     // },
+    clickShowSectionMenu(event)
+    {
+      if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
+      {
+        this.$store.commit('setCurrentOpenSectionMenuId', null);
+      }
+      else
+      {
+        this.$store.commit('setCurrentOpenSectionMenuId', this.section.id);  
+      }
+      
+      // this.menuSelected=true;
+    },
     runSanitizer(content)
     {
       var parser = new Sanitizer.HtmlWhitelistedSanitizer(true);
@@ -419,7 +470,6 @@ export default
     { 
       Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
       this.addUndo(event);
-
     },
     sectionChanged()
     {
@@ -513,6 +563,7 @@ export default
     },
     undoLast()
     {
+      console.log('undo');
       var item = this.getLastUndoItem();
       if (item)
       {
@@ -554,7 +605,7 @@ export default
       //this.selectedRange.commonAncestorContainer;        
     },
     getSelectedText(event) 
-    {
+    {      
       if (window.getSelection().rangeCount==0)
       {
         return;
@@ -570,14 +621,17 @@ export default
       this.selectedElement = event.target;   
 
       this.$emit('selected-text', event, { section: this.section, node: this.selectedNode, range: this.selectedRange });
+      // console.log(this.selectedRange.startOffset, this.selectedRange.startContainer, this.selectedRange.endOffset, this.selectedRange.endContainer );
       if (this.selectedRange.startOffset!=this.selectedRange.endOffset)
       {
         // console.log('showFormatMenu');
-        this.showFormatMenu=true;
+        this.formattingStarted();
+        // this.showFormatMenu=true;
       }
       else
       {
-        this.showFormatMenu=false;
+        this.formattingEnded();
+        // this.showFormatMenu=false;
       }
       // console.log('getSelectedText', this.selectedNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       var el = event.target;
@@ -585,7 +639,7 @@ export default
     },
     selectText(begin, end, startPos, endPos) 
     {
-
+      this.clearSelectedText();
       var range = document.createRange();
       var sel = window.getSelection();
       
@@ -595,15 +649,36 @@ export default
       // range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);      
-
     },    
     convertToPlainText(event)
     {
       this.$refs.section_text.innerHTML = this.getSectionText_();//this.$refs.section_text.innerText;
       this.saveContents(this.$refs.section_text); 
     },
-    formatText(event, type)
+    formattingStarted()
     {
+      this.formattingInProgress=true;
+      // this.$store.commit('setFormattingStarted', this.section.id);
+    },
+    formattingEnded()
+    {
+      this.formattingInProgress=false;
+      // this.$store.commit('setFormattingEnded', this.section.id);
+    },
+    isFormattingInProgress()
+    {
+      return this.formattingInProgress;
+      // var progress = this.$store.getters.getIsFormattingInProgress;
+
+      // if (progress.sectionId == this.section.id && progress.inProgress)
+      // {
+      //   return true;
+      // }
+      // return false;
+      
+    },    
+    formatText(event, type)
+    {      
       this.selectText(this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       var start = this.selectedRange.startOffset;
       var end = this.selectedRange.endOffset;
@@ -611,6 +686,7 @@ export default
 
       document.execCommand(type , false , null);
 
+      // this.formattingEnded();
       this.checkAndQueueDeltaChange(this);
       var range = document.createRange();
       var sel = window.getSelection();
@@ -1171,6 +1247,7 @@ export default
     {
       this.stopPolling();
       self.lastKeyDownEvent=null;
+
       if (event.target.id==this.section.id)
       {
         if (!this.sectionIsDeleted)
@@ -1203,6 +1280,10 @@ export default
     {
       // this.markHtml(event.target, 'true'); 
       // event.target.innerHTML+=" ";
+      // if (!this.isFormattingInProgress())
+      // {
+      //   this.showFormatMenu=false;
+      // }      
       //percolate a section in focus up the parents
       this.$emit('section-in-focus', event, section, depth);
     },

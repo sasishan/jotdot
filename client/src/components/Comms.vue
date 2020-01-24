@@ -166,7 +166,7 @@ export default
 				}, function(error)
 				{
 					console.log('An error occurred: ', error);
-					resolve(null);
+					reject(error);
 				});
 			}
 			catch (err) 
