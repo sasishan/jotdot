@@ -3,7 +3,7 @@
   <span v-if="errorOccurred===true">
     <h6 class="text-danger mt-5">{{error}}</h6>
   </span>
-  <span v-if="isLoaded===false">
+  <span v-if="isLoaded===false && errorOccurred!=true">
     {{loadingMessage}} <font-awesome-icon size="lg" icon="spinner" class="fa-spin" />
   </span>
   <span v-if="isLoaded===true">
@@ -60,16 +60,22 @@ export default
     {
       return this.jotsLoaded;
     },
+    errorOccurred()
+    {
+      if (this.error=="")
+      {
+        return false;
+      }
+      return true;
+    },    
   },  
   async mounted()
   {
     this.$store.commit('clearStoredData');
     var response = await this.loadJots();
-    console.log(response)
     if (response.error)
     {
-      this.jotsLoaded= true;
-      this.setError(Common.Messages.CouldNotLoad);
+      this.setError(Common.Messages.CouldNotReachServer);
     }
     else
     {
@@ -78,14 +84,7 @@ export default
   },
   methods: 
   {
-    errorOccurred()
-    {
-      if (this.error=="")
-      {
-        return false;
-      }
-      return true;
-    },
+
     setError(errorMessage)
     {
       this.error = errorMessage;
@@ -100,21 +99,24 @@ export default
     },
     async loadJots()
     {
+      var loadError=null;
       // await this.$store.dispatch('loadJots');
       var url = Common.URLS.Documents;
       var item = await Comms.get(url).catch((error) => 
       { 
-        return {error: error, jots: null};
+        loadError = error;
       });
 
-      console.log('item',item);
+      if (loadError)
+      {
+        return {error: loadError, jots: null};
+      }
+
       if (item)
       {
         this.$store.commit('initializeJots',  item);
         return {error: null, jots: item};
       }
-
-      return {error: null, jots: []};
     },
     getJotPermissions(jot)
     {

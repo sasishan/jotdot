@@ -2,7 +2,7 @@
   <div >  
     <font-awesome-icon 
     :icon="getIcon" 
-    size="xs" 
+    size="sm" 
     :style="getStyle" 
     @mouseover="hover = true;" 
     @mouseleave="showSectionMenu==false ? hover = false : hover = true;"
@@ -48,18 +48,18 @@ export default
     {
       if (this.hover)
       {
-        return {'color':'#007bff'};
+        return {'color':'#007bff', 'cursor': 'pointer'};
       }
       else
       {
-        return {'color':'#fff'};
+        return {'color':'#fff', 'cursor': 'pointer'};
       }
     },
     getIcon()
     {
       if (!this.showSectionMenu)
       {
-        return ['fas', 'ellipsis-h']
+        return ['fas', 'bars']
       }
       else
       {

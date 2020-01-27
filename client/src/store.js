@@ -187,14 +187,20 @@ export const store = new Vuex.Store({
 	    },
 		async loadJotsSections(state, jotId)
 		{
+			var loadError=null;
 			if (jotId)
 			{
 				var url = Common.URLS.Documents + jotId;
 				var items = await Comms.get(url).catch((error) => 
 				{ 
-					// console.error(error); 
-					return {error: error, sections: null};
+					loadError=error;
 				});
+
+				if (loadError)
+				{
+					return {error: loadError, sections: null};
+				}
+				
 				if (items)
 				{
 				  state.commit('initializeSection',  items);

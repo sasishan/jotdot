@@ -1,7 +1,6 @@
 <template>
   <div @mouseover="hover = true" @mouseleave="hover = false">  
-    <font-awesome-icon :icon="getIcon" :style="getStyle" v-on:click="clickUpDown" 
-      />
+    <font-awesome-icon :icon="getIcon" :style="getStyle" v-on:click="clickUpDown"/>
   </div>
 </template>
 
@@ -27,11 +26,11 @@ export default
     {
       if (this.hover)
       {
-        return {'color':'#000'};
+        return {'color':'#000', 'cursor': 'pointer'};
       }
       else
       {
-        return {'color':'#CCC'};
+        return {'color':'#CCC', 'cursor': 'pointer'};
       }
     },
     getIcon()

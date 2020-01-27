@@ -67,29 +67,41 @@ export default
 				position: newIndex
 			};
 		this.queueOperation(store, operation);
-	},	
-	moveSectionOps(store, sectionToMove, fromParent, newParent)
+	},
+	moveSectionOps(store, sectionToMove, fromParent, newParent, newIndex=Common.APPEND_SECTION)
 	{
 		this.removeExistingSection(sectionToMove, fromParent);
 		
 		//debounce
-        Common.sleep(5).then(() => {
-          this.addExistingSection(sectionToMove, newParent);
+        // Common.sleep(5).then(() => 
+        // {
+        	var position;
+        	if (newIndex==Common.APPEND_SECTION || newIndex>=newParent.sections.length)
+        	{
+    			// console.log('1');
+        		this.addExistingSection(sectionToMove, newParent);
+        		position = newParent.sections.length-1;		
+        	}
+        	else
+        	{
+        		position=newIndex;
+        		this.addExistingSection(sectionToMove, newParent, newIndex);		
+        	}
 
-	      var operation = 
-	      	{
-	      		type: OpsConfig.ValidClientOperations.MoveSection,   
-	      		section: sectionToMove, 
-				parentSection: newParent, 
-				position: (newParent.sections.length-1)
-			};
-	      this.queueOperation(store, operation);
+			var operation = 
+				{
+					type: OpsConfig.ValidClientOperations.MoveSection,   
+					section: sectionToMove, 
+					parentSection: newParent, 
+					position: position
+				};
+			this.queueOperation(store, operation);
 
-          Vue.nextTick(() => 
-          {   
-            document.getElementById(sectionToMove.id).focus();
-          });  
-        });
+			Vue.nextTick(() => 
+			{   
+				document.getElementById(sectionToMove.id).focus();
+			});  
+        // });
 	},
 	openCloseOp(store, section, open)
 	{
@@ -198,13 +210,22 @@ export default
 		}
 		return callback(null, 'success');
     },
-    addExistingSection(existingSection, toNewParentSection)
+    addExistingSection(existingSection, toNewParentSection, toIndex=Common.APPEND_SECTION)
     {
       var priorId=undefined;
 
       existingSection.parentSection = toNewParentSection.id;
 
-      toNewParentSection.sections.push(existingSection);
+      if (toIndex==Common.APPEND_SECTION)
+      {
+      	toNewParentSection.sections.push(existingSection);
+      }
+      else
+      {
+      	// console.log('splicing', toNewParentSection.sections, toIndex);	
+      	toNewParentSection.sections.splice(toIndex, 0, existingSection );	
+      }
+      
     },    
 	removeExistingSection(sectionToRemove, fromParent)
 	{

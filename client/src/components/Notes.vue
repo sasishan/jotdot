@@ -39,6 +39,8 @@
           @special-key-pressed="keyMonitor" 
           @special-key-down-pressed="keyDownMonitor"
           @save-section="saveSections"
+          @backspace-begin-section="backspaceAtBegin"
+          @enter-key-pressed="processEnterKey"
           />
       </transition-group>
     </draggable>
@@ -231,6 +233,45 @@ export default
   },    
   methods: 
   {
+    backspaceAtBegin(event, section)
+    {
+      var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
+
+      var above = this.getPriorSectionInSameParent(parentSection, section);
+      if (above!=parentSection)
+      {
+        //its not at the top
+        if (above.sections.length>0)
+        {
+          return; //the above doesnt have children
+        }
+
+        above.html += section.html;
+        for (var i=section.sections.length-1; i>=0; i--)
+        {
+          var childSection = section.sections[i];
+          Operations.moveSectionOps(this.$store, childSection, section, above);  
+        }
+        // Operations.removeSectionOp(this.$store, section, parentSection);
+        Operations.removeSectionOp(this.$store, section, parentSection);
+
+        //move to end of last section
+        // var element = document.getElementById(priorSection.id);
+        // Common.sleep(5).then(() => 
+        // {
+        //   Common.setEndOfContenteditable(element); 
+        // });
+
+        Vue.nextTick(() => {
+          // .focus();
+          Common.setEndOfContenteditable(document.getElementById(above.id)); 
+          // console.log('foused');
+        });         
+
+        // Operations.moveSectionOps(this.$store, section, parentSection, priorSection);  
+      }      
+      return;
+    },
     titleChanged(titleSection)
     {
       // console.log(titleSection, this.$refs.titleSection.innerHTML);
@@ -741,8 +782,7 @@ export default
         parentSection, 
         parentSection, 
         event.newIndex);
-      console.log((this.$store.getters.sectionsList));
-      console.log(draggedSection.parentSection);
+
       // console.log('finish drag', draggedSection, parentSection, this.currentMainSection, this.currentSelection);
     },
     ////////////////////////////////
@@ -831,8 +871,10 @@ export default
         this.changeFocusUp(section);
       }            
     },
-    processEnterKey(section)
+    processEnterKey(event, section, textContent, innerHTML)
     {
+      console.log('processEnterKey', textContent);
+      var newSectionInitialValue=null;
       var parentSection = this.getSectionById([this.currentMainSection], this.currentFocusedSection.parentSection, false);  
       var index = this.getSectionIndexById(parentSection.sections, this.currentFocusedSection.id);
       var element = document.getElementById(this.currentFocusedSection.id);
@@ -843,17 +885,74 @@ export default
       var toSection={};
       var position =Common.APPEND_SECTION;
 
-      if (caretPosition.caretOffset==0)
+      var isAtBeginningOfSection = (caretPosition.caretOffset==0);
+
+      // var curPosition = TextFormatter.currentPosition();
+      var isAtEndingOfSection = ( (caretPosition.range.endContainer.nextSibling==null) && 
+                                  (caretPosition.range.endContainer.textContent.length==caretPosition.caretOffset) ) ||
+                                 (  caretPosition.range.endContainer.nextSibling &&
+                                    caretPosition.range.endContainer.nextSibling.nodeName=="BR" && 
+                                    caretPosition.range.endContainer.nextSibling.nextSibling==null );
+      // ( caretPosition.caretOffset==(section.text.length-1) );
+      var sectionHasChildren = ( section.sections.length>0) ;
+
+      // console.log('position', isAtEndingOfSection);
+      if (this.currentFocusedSection.open==false) 
       {
-        // addSection(store, toSectionArray, parentSection, atIndex=-1)
-        // newSection = this.addSection(parentSection.sections, parentSection, index);
+        toSection=parentSection.sections;
+        parent =parentSection;
+        position = index+1;        
+      }
+      else if (isAtBeginningOfSection)
+      {
+        // console.log('1');
+        //Add section above the current one to this section
         toSection=parentSection.sections;
         parent =parentSection;
         position = index;
         // Operations.addSectionOp(this.$store, parentSection.sections, parentSection, index);
       }
+      else if (isAtEndingOfSection && sectionHasChildren)
+      {
+        toSection=section.sections;
+        parent = section;
+        position = 0;        
+      }
+      else if (!isAtEndingOfSection && !isAtBeginningOfSection)
+      {
+        // console.log(innerHTML);
+
+        var firstHalfNode = document.createTextNode(textContent);
+        // firstHalfNode.innerHTML = innerHTML;
+        // var secondHalfNode = document.createTextNode(textContent);
+        // secondHalfNode.innerHTML = innerHTML;
+
+        firstHalfNode.textContent =  "AAAA";//textContent.substring(0, caretPosition.caretOffset);
+        console.log(firstHalfNode.innerHTML, firstHalfNode.textContent);
+
+        // var curPosition = TextFormatter.currentPosition();
+        // TextFormatter.getFirstHalf(curPosition);
+        // var secondHalfNode = TextFormatter.getLatterHalf(curPosition);
+        // console.log('processEnterKey', node.textContent);
+        // console.log('processEnterKey', section.html, section.text);
+
+        //take the first half, split it out into its own section above the current one
+        //use textcontent because the text cannot be committed without moving the caret position
+        newSectionInitialValue = textContent.substring(0, caretPosition.caretOffset);
+        var finalString = textContent.substring(caretPosition.caretOffset, textContent.length);
+
+        section.html = finalString;//secondHalfNode.textContent;
+        section.text = finalString;// secondHalfNode.textContent;
+        section.sectionIsDeleted=false;
+
+        document.getElementById(section.id).focus();
+        toSection=parentSection.sections;
+        parent = parentSection;
+        position = index;          
+      }
       else if (this.currentFocusedSectionDepth==0)
       {
+      
         // newSection = this.addSection(this.currentSelection, this.currentMainSection, index+1);
         toSection=this.currentMainSection.sections;
         parent =this.currentMainSection;
@@ -878,7 +977,8 @@ export default
         // Operations.addSectionOp(this.$store, section.sections, section, index+1);  
         toSection=section.sections;
         parent =section;
-        position = index+1;        
+        // position = index+1;
+        position = 0        
       }
       else
       {
@@ -886,10 +986,21 @@ export default
       }
 
       newSection = this.addSection(toSection, parent, position);
+      // console.log(initialValue);
+      if (newSectionInitialValue)
+      {
+        newSection.text = newSectionInitialValue;//firstHalfNode.textContent;
+        newSection.html = newSectionInitialValue;//firstHalfNode.innerHTML;
+      }            
       Operations.addSectionOp(this.$store, newSection, parent, position);
+
 
       Vue.nextTick(() => { 
         document.getElementById(newSection.id).focus();
+        if (newSectionInitialValue)
+        {
+          document.getElementById(section.id).focus();
+        }            
       });       
     },
     keyMonitor(event, section) 
@@ -898,7 +1009,7 @@ export default
 
       if (event.key==Common.Key_Enter)
       {
-        this.processEnterKey(section);
+        // this.processEnterKey(section);
       }      
     },
     ///////////////////////////////
@@ -955,12 +1066,13 @@ export default
     },    
     moveSectionBackwards(section)
     {     
-      var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);          
-      var grandParentSection = this.getSectionById([this.currentMainSection], parentSection.parentSection, false); 
-
-      if (parentSection!=undefined && grandParentSection!=undefined)
+      var fromParent = this.getSectionById([this.currentMainSection], section.parentSection, false);          
+      var toParent = this.getSectionById([this.currentMainSection], fromParent.parentSection, false); 
+      var fromParentIndex = this.getSectionIndexById(toParent.sections, fromParent.id);
+      if (fromParent!=undefined && toParent!=undefined)
       {
-        Operations.moveSectionOps(this.$store, section, parentSection, grandParentSection);
+        // console.log( toParent, fromParent, (fromParentIndex+1));
+        Operations.moveSectionOps(this.$store, section, fromParent, toParent, (fromParentIndex+1));
       }         
     },    
     deleteBlankSection(sectionToDelete)

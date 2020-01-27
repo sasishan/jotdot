@@ -8,8 +8,11 @@ Common.AppName = "JotDot";
 Common.DefaultDebounceTimeInMS = 5;
 Common.DefaultOpsQueuePollingInMS = 5000;
 Common.DefaultTextChangePollingInMS = 3000;
+Common.DefaultDebounceInMS = 5;
 Common.MaxBreadCrumbText = 30;
 Common.HashTagMatch = /#\S+/g;
+
+Common.MaxOff=8;
 
 Common.HashTag = '#';
 Common.TagContentClass="tagContent";
@@ -53,7 +56,8 @@ Common.Messages =
     Loading: 'Loading, please wait...', 
     TagSearch: 'Tags',
     DeleteJot: 'Delete Jot',
-    CouldNotLoad: "Could not load the contents of this Jot. Please check your permissions and try again.",
+    CouldNotLoad: "Could not load the contents of this Jot. Please check your internet connection or permissions and try again.",
+    CouldNotReachServer: "Could not reach the JotDot Server. Please check your internet connection and refresh the page.",
     CouldNotSync: "There was an error syncing the data. Please check your internet connection and refresh the page.",
     DeleteCancelledMessage:'Delete was cancelled',
     DeleteCancelledMessageNotMatching: "Delete was cancelled as entered text did not match",

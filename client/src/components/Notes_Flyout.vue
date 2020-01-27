@@ -1,6 +1,6 @@
 <template>
   <div >
-  <font-awesome-icon :size="getSize" :icon="getIcon" v-on:click="clickFlyout" @mouseover="hover = true" @mouseleave="hover = false"/>
+  <font-awesome-icon :style="getStyle" :size="getSize" :icon="getIcon" v-on:click="clickFlyout" @mouseover="hover = true" @mouseleave="hover = false"/>
   </div>
 </template>
 
@@ -25,6 +25,17 @@ export default
   },
   computed: 
   {
+    getStyle()
+    {
+      if (this.hover)
+      {
+        return {'color':'#000', 'cursor': 'pointer'};
+      }
+      else
+      {
+        return {'color':'#000', 'cursor': 'pointer'};
+      }
+    },    
     getIcon()
     {
       if (this.hover)

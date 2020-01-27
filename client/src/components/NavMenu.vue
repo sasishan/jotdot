@@ -10,7 +10,7 @@
       <b-navbar-nav>
         <b-nav-item to='/jots'>Jots</b-nav-item>
         <b-nav-item to='/tags'>Tags</b-nav-item>
-        <b-nav-item to='/test'>Test Area</b-nav-item>
+        <!--b-nav-item to='/test'>Test Area</b-nav-item-->
         <b-nav-item to='/about'>About</b-nav-item>
       </b-navbar-nav>
       <!-- Right aligned nav items -->

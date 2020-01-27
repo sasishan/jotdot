@@ -49,6 +49,7 @@ TextFormatter.getOffsetOfLastCharacter = function(position, characterToMatch)
 
 TextFormatter.deleteText = function(position, offsetFromCurrent)
 {
+  // console.log(position, offsetFromCurrent);
   if (position.node)
   {
     var node = position.node;
@@ -60,6 +61,45 @@ TextFormatter.deleteText = function(position, offsetFromCurrent)
 
     var newPosition = {node: node, offset: position.offset+offsetFromCurrent};
     TextFormatter.setCaretPosition(newPosition);
+  } 
+}
+
+TextFormatter.getFirstHalf = function(position)
+{
+  // console.log(position);
+  if (position.node)
+  {
+    var node = position.node;
+    var content = node.textContent;
+    var firstHalf = content.substring(0, position.offset);
+    // var secondHalf = content.substring(position.offset, content.length);
+    
+    node.textContent = firstHalf;
+
+    return node;
+    // var newPosition = {node: node, offset: position.offset};
+    // TextFormatter.setCaretPosition(newPosition);
+  } 
+}
+
+TextFormatter.getLatterHalf = function(position)
+{
+  console.log(position);
+  if (position.node)
+  {
+    var node = position.node;
+    var content = node.textContent;
+
+    console.log(content);
+    var secondHalf = content.substring(position.offset, content.length);
+    console.log(secondHalf);
+    // var secondHalf = content.substring(position.offset, content.length);
+    
+    // node.textContent = secondHalf;
+
+    return node;
+    // var newPosition = {node: node, offset: position.offset};
+    // TextFormatter.setCaretPosition(newPosition);
   } 
 }
 
@@ -236,7 +276,15 @@ TextFormatter.DeleteNonContentEditable=function(element)
       // reached the beginning of editable field
       return false;
   }
-  range.setStart(element, range.endOffset - 1);
+  try 
+  {
+    range.setStart(element, range.endOffset - 1);
+  }
+  catch (e)
+  {
+    return false; 
+  }
+  
 
   var previousNode = range.cloneContents().lastChild;
 

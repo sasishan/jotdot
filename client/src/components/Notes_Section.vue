@@ -56,6 +56,8 @@
       @section-in-focus="sectionInFocus"
       @section-in-blur="sectionBlurred"
       @special-key-down-pressed="emitKeyDownPress"
+      @backspace-begin-section="emitBackspaceAtBegin"
+      @enter-key-pressed="emitEnterDownPress"
       />     
       </draggable>
   </div>
@@ -513,17 +515,14 @@ export default
     getLastUndoItem()
     {
       var undo = this.getUndo();
-      console.log('1', undo);
       if (undo.length>1)
       {
         var lastIndex=0;
         var potentialUndo=null, currentUndo=null;
         var undoItem = undo[undo.latestIndex];
 
-        console.log('6', undo.latestIndex);
         if (undo.latestIndex>1)
         {
-          console.log('2');
           potentialUndo = undo[undo.latestIndex-1];
           currentUndo = undo[undo.latestIndex];          
           lastIndex = undo.latestIndex-1;
@@ -531,7 +530,6 @@ export default
         }
         else if (undo.latestIndex==0 && undo.length==(Common.MAX_UNDO_ITEMS-1))
         {
-          console.log('3');
           //loop to top?
           potentialUndo = undo[Common.MAX_UNDO_ITEMS-1];
           currentUndo = undo[0];
@@ -540,7 +538,6 @@ export default
 
         if ( potentialUndo && (potentialUndo.timestamp <= currentUndo.timestamp) )
         {
-          console.log('4');
           undo.latestIndex = lastIndex;
           undoItem = potentialUndo;
         }       
@@ -559,7 +556,6 @@ export default
         //   }
         // }        
       }
-      console.log('5');
     },
     undoLast()
     {
@@ -1031,12 +1027,20 @@ export default
     },
     emitKeyPress(event,section)
     {
-      this.$emit('special-key-pressed', event, section)
+      this.$emit('special-key-pressed', event, section);
+    },
+    emitBackspaceAtBegin(event, section)
+    {
+      this.$emit('backspace-begin-section', event, section);
     },
     emitKeyDownPress(event, eventType, section)
     {
       this.$emit('special-key-down-pressed', event, eventType, section)
     },    
+    emitEnterDownPress(event, section, textContent, innerHTML)
+    {
+      this.$emit('enter-key-pressed', event, section, textContent, innerHTML);
+    },      
     resetSearchText()
     {
       this.$store.commit('setSearchText', "");
@@ -1101,7 +1105,7 @@ export default
       Common.sleep(5).then(() => 
       {
         var pos = TextFormatter.getCaretPixelPos(event.target);
-        if (this.lastOffsetY==pos.top || this.between(this.lastOffsetY, pos.top-maxOff, pos.top+maxOff))
+        if (this.lastOffsetY==pos.top || this.between(this.lastOffsetY, pos.top-Common.MaxOff, pos.top+Common.MaxOff))
         {
           this.emitKeyDownPress(event, eventType, this.section);  
         }          
@@ -1115,7 +1119,6 @@ export default
     {
       this.resetSearchText();
       this.endOrContinueTagMarking(event.key);
-      var maxOff=8;
 
       if (event.key==Common.Key_Up && !this.shiftPressed)
       {
@@ -1165,13 +1168,15 @@ export default
       }      
       else if (!this.shiftPressed && event.key=="Enter")
       {
-
+        console.log('key down enter');
+        // this.commitContentsToSection();        
+        this.emitEnterDownPress(event, this.section, this.$refs.section_text.textContent, this.$refs.section_text.innerHTML);
         if (event) event.preventDefault();
         if (event) event.stopPropagation();  
+        
       }
       else if (event.key=="Backspace")
       {
-
         var result = TextFormatter.DeleteNonContentEditable(event.target);
         if (result)
         {
@@ -1185,11 +1190,36 @@ export default
           {
             this.sectionIsDeleted=true;
             this.emitKeyDownPress(event, 'backspace-blank-section', this.section);
-                      // event.preventDefault();
             event.stopPropagation(); 
             event.preventDefault();
-            // event.stopPropagation();  
-          }          
+          }    
+          else
+          {
+            //find if we're at the beginning of the section or bottom by checking if the caret moves and then section up
+            var pos = TextFormatter.getCaretPixelPos(event.target);
+            this.lastOffsetX = pos.left;
+            this.lastOffsetY = pos.top;
+            
+            Common.sleep(Common.DefaultDebounceInMS).then(() => 
+            {
+              var pos = TextFormatter.getCaretPixelPos(event.target);
+              if (this.lastOffsetX==pos.left && this.lastOffsetY==pos.top)
+              {
+                this.sectionIsDeleted=true;
+                this.commitContentsToSection();
+                this.$emit('backspace-begin-section', event, this.section);
+
+                // event.preventDefault();
+                // event.stopPropagation();                  
+                // this.emitKeyDownPress(event, 'backspace-begin-section', this.section);  
+              }          
+              else
+              {
+                this.lastOffsetX=pos.left;
+                this.lastOffsetY = pos.top;
+              }
+            });            
+          }      
         }
       }
     },  
@@ -1200,7 +1230,7 @@ export default
     },
     commitContentsToSection()
     {
-      if (!this.inSearchMode())
+      if (!this.inSearchMode() && this.$refs.section_text)
       {
         this.section.text = this.$refs.section_text.innerText;
         this.section.html = this.$refs.section_text.innerHTML;           
@@ -1227,6 +1257,9 @@ export default
       } 
       else if (event.key=="Enter" && !this.shiftPressed)
       {
+        console.log('keyup enter');
+        // event.stopPropagation(); 
+        // event.preventDefault();         
         this.emitKeyPress(event, this.section);
       }  
       else if (event.key=="Shift")
@@ -1247,7 +1280,6 @@ export default
     {
       this.stopPolling();
       self.lastKeyDownEvent=null;
-
       if (event.target.id==this.section.id)
       {
         if (!this.sectionIsDeleted)
@@ -1274,6 +1306,8 @@ export default
     },
     focusSection() //when the section is focused, emit an event
     {
+      // console.log('in focus', this.section);;
+      this.commitContentsToSection();
       this.$emit('section-in-focus', event, this.section, this.depth)
     },
     sectionInFocus(event, section, depth) //when a focus signal is received, pass it up the chain
