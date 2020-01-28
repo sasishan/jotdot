@@ -1,6 +1,6 @@
 var config={};
 config.dbURI = "mongodb://127.0.0.1:27017/NoteMaker";  //URL for a mongodb database
-config.port =3010;  //Port where honchoHQ will be accessible through
+config.port =3020;  //Port where honchoHQ will be accessible through
 config.COGNITO_CONFIG =
 {
     region: 'us-west-2',

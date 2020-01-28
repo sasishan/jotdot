@@ -1,7 +1,7 @@
 var Common={};
 
 
-var urlBase = 'http://localhost:3010';
+var urlBase = 'http://localhost:3020';
 
 Common.AppName = "JotDot";
 
