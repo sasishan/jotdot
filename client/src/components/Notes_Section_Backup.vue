@@ -1,33 +1,48 @@
 <template>
   <div >
     <span :style="getSectionsLength>0 ? formatIndent : formatNoUpIndent" v-if="showFormatMenu && allowEdit==true" >
-      <Notes_Formatter @format-text="formatText" />        
+      <Notes_Formatter 
+        @format-text="formatText"         
+        :section="section" 
+        :showFormatting="formattingInProgress"
+        :undoLength="getUndo().length"/>             
     </span>     
     <span :style="upIndent" v-if="getSectionsLength>0 && allowEdit==true" >
       <Notes_Up @updown-click="openCloseSection" :open="getOpenState" />        
     </span>  
      <span :style="getSectionsLength>0 ? menuIndent :  upIndent" v-if="allowEdit==true">
-      <Notes_Menu @flyout-click="selectSection" :sectionId="getId" v-if="allowEdit==true" @set-plain-text="convertToPlainText"/>      
+      <Notes_Menu 
+        @click-section="clickShowSectionMenu"
+        :sectionId="getId" 
+        :undoLength="getUndo().length"
+        v-if="allowEdit==true" 
+        @set-plain-text="convertToPlainText"
+        @undoLast="undoLast()"
+        :showSectionMenu="showSectionMenu"/>      
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>
+    <!--TipTap 
+      :style="sectionIndent" 
+      :sectionContent="getSectionContent" /-->
     <div 
       :id="getId"
       ref="section_text"         
-      v-html="getSectionText"
+      v-html="getSectionContent"
       :style="sectionIndent" 
-      :contenteditable="true" 
-      v-on:keyup="keyMonitor($event)"  
+      :contenteditable="getEditable" 
+      v-on:keyup="keyUpMonitor($event)"  
       @keydown.tab.prevent 
       @keyDown.shift.prevent
       v-on:keydown="keyDownMonitor"
       @focus = "focusSection"
       @mouseup="getSelectedText"
       @input="inputText"
+      @paste="pasteContent"
       @blur = "blurSection($event, section)"> 
     </div>
-   <draggable v-model="getSections" :disabled="isMobile()" @end="dragEnd" v-bind="dragOptions()">
+   <draggable v-model="getSections" :disabled="isMobile() || !allowEdit" @end="dragEnd" v-bind="dragOptions()">
     <Notes_Section v-for="(section, index) in getSections" 
       :section="section" 
       :depth="depth+1" 
@@ -41,6 +56,8 @@
       @section-in-focus="sectionInFocus"
       @section-in-blur="sectionBlurred"
       @special-key-down-pressed="emitKeyDownPress"
+      @backspace-begin-section="emitBackspaceAtBegin"
+      @enter-key-pressed="emitEnterDownPress"
       />     
       </draggable>
   </div>
@@ -54,148 +71,14 @@ import Notes_Menu from '.././components/Notes_Menu';
 import Notes_Formatter from '.././components/Notes_Formatter';
 import Operations from './Operations.vue';
 import Common from '../Common.js';
+import Sanitizer from '../Sanitizer.js';
 import { Auth } from 'aws-amplify';
 import Sections_Editor from '../components/Sections_Editor.vue';
 import draggable from 'vuedraggable';
 import TextFormatter from '../TextFormatter.js';
 import { uuid } from 'vue-uuid';
-
-function getCaretPosition(el)
-{
-  var caretOffset = 0, sel;
-  if (typeof window.getSelection !== "undefined") 
-  {
-    var range = window.getSelection().getRangeAt(0);
-    var selected = range.toString().length;
-    var preCaretRange = range.cloneRange();
-    preCaretRange.selectNodeContents(el);
-    preCaretRange.setEnd(range.endContainer, range.endOffset);
-    caretOffset = preCaretRange.toString().length - selected;
-  }
-  return caretOffset;
-}
-
-function setLastLineBreak(element, self)
-{
-  var selection = window.getSelection();
-  console.log(selection);
-  var parent = selection.anchorNode;
-  console.log(parent);
-  // var range = document.createRange();
-  // var range = window.getSelection().getRangeAt(0);
-  var range = document.createRange();
-  // range.setEnd(element, selection.anchorOffset);
-  range.selectNodeContents(element);
-  var previousNode = range.cloneContents().lastChild;
-  
-  // console.log(previousNode.nodeValue, previousNode.nodeType, previousNode.nodeName, previousNode.outerText);
-  if (previousNode && previousNode.nodeName=='BR')
-  {
-    // var newLine = self.getNewLineElement();
-    // console.log(newLine);
-    // previousNode = newLine;
-    // previousNode.className="shiftEnter";
-    // parent.replaceChild(newLine, previousNode);
-    // console.log(previousNode);
-  }
-  // range.setEndBefore(selection.anchorNode);
-  // range.setStart(element, range.endOffset - 1);
-  // var previousNode = range.cloneContents().lastChild;
-  
-}
-
-function setCaretPositionSpace(el, self) 
-{
-  var range = document.createRange();
-  var sel = window.getSelection();
-  
-  var tagText = sel.focusNode.wholeText;
-  var tags = tagText.split(" ");
-
-
-  if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
-  {
-    var hashTagText = sel.anchorNode.parentNode;
-    var tagContent = sel.anchorNode.parentNode.parentNode;
-
-    var tagElement = self.getNewHashTagElement(tags[0]);
-    // var newSpan = document.createElement('span');
-    // newSpan.className = Common.HashTagTextClass;
-    // newSpan.innerHTML = tags[0];
-
-    tagContent.replaceChild(tagElement, hashTagText);
-    if (tags.length>1)
-    {
-      tagElement.after(" "+tags[1]);  
-    }
-    else
-    {
-      tagElement.after(" ");    
-    }    
-    
-    // if (tags.length>1)
-    // {
-    //   tagContent.after(" "+tags[1]);  
-    // }
-    // else if (!tagContent.nextSibling)
-    // {
-    //   // console.log('no tag');
-    //   tagContent.after("\u200B");
-    //   // tagContent.nextSibling.after(" ");
-    //   // console.log('next sibling', tagContent.nextSibling);
-    //   // tagContent.nextSibling.after(" ");
-    // }
-    // else
-    // {
-    //   tagContent.after(" ");
-    // }
-
-    // var range = document.createRange();
-    // var sel = window.getSelection();
-
-    // range.setStart(newSpan, 1);
-
-    range.setStart(tagElement.nextSibling, 1);
-    range.collapse(false);  
-    
-    sel.removeAllRanges();
-    sel.addRange(range);
-    el.focus();      
-
-    var next = tagContent.nextSibling;
-    // tagContent.appendChild(newSpan);
-    // parentNode.after("A");
-    // parentNode.insertAfter('&nbsp;', el);
-  }
-}
-
-//From https://stackoverflow.com/questions/512528/set-keyboard-caret-position-in-html-textbox
-// function setCaretPosition(elem, caretPos) {
-//     var range;
-
-//     if (elem.createTextRange) {
-//         range = elem.createTextRange();
-//         range.move('character', caretPos);
-//         range.select();
-//     } else {
-//         elem.focus();
-//         if (elem.selectionStart !== undefined) {
-//             elem.setSelectionRange(caretPos, caretPos);
-//         }
-//     }
-// }
-
-// function setCaretPosition(el, caretPos) 
-// {
-//   var range = document.createRange();
-//   var sel = window.getSelection();
-//   range.setStart(el.childNodes[0], caretPos);
-//   range.collapse(true);
-//   sel.removeAllRanges();
-//   sel.addRange(range);
-//   el.focus();  
-
-// }
+import sanitizeHTML from 'sanitize-html';
+import TipTap from '../components/TipTap';
 
 export default 
 {
@@ -215,24 +98,34 @@ export default
     Notes_Menu,
     Sections_Editor,
     Notes_Formatter,
-    draggable,  
+    draggable, 
+    TipTap 
   },
   mounted()
   {
+    // this.initializeSection();
+    this.sectionText = this.section.text;
+    this.sectionHtml = this.section.html;//
+
     //JQUERY events to catch tags
     this.setTagClick();
   },
   data: function() 
   {
     return { 
+      sectionHtml:{}, 
+      sectionText:{},
+      tagText:'',
+      formattingInProgress:false,
+
+      menuSelected:false,
+
+      lastOffsetY: 0,
       tagStarted:false,
       poll:null,
       lastKeyDownEvent:null,
       htmlText:'',
 
-      sectionHtml:'', 
-      sectionText:'',
-      
       sectionLeft: 50,
       upBulletLeft: 10,
       formatBulletLeft:-100,
@@ -240,13 +133,13 @@ export default
       bulletLeft: 30,
       menuBulletLeft: 0,
 
-      indentDelta:50,
+      indentDelta: 40,
       lineHeight: '2',
       shiftPressed: false,
       sectionIsDeleted:false,
       selectedRange:{ empty:true},
       selectedNode:{},
-      showFormatMenu:false,
+      // showFormatMenu:false,
       selectedBeginNode:null,
       selectedEndNode:null,
 
@@ -309,6 +202,85 @@ export default
   },
   computed: 
   {
+    showSectionMenu()
+    {
+      // console.log(this.$store.getters.getCurrentOpenSectionMenuId, this.section.id);
+
+      if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
+      {
+        return true;
+      }
+      return false;
+    },
+    showFormatMenu()
+    {
+      if (this.isFormattingInProgress() && this.$store.getters.getCurrentFocusSectionId==this.section.id)
+      {
+        return true;
+      }
+      return false;
+    },
+    getSectionContent()
+    {
+      var content="";
+      if (this.allowEdit)
+      {
+        if (this.inSearchMode() && this.section.searchHtml)
+        {
+          content= this.section.searchHtml; //hacky!
+        }
+        else
+        {
+          // console.log('section html', this.sectionHtml);
+          if (this.section.html=="")
+          {
+            content= "</br>"; //for firefox
+          }
+          else
+          {
+            content= this.section.html;    
+          }
+        }
+      }
+      else
+      {
+        content= '-  ' +this.section.html; 
+      }
+
+      // return content;
+      // console.log(sanitized)
+      // return this.runSanitizer(content);
+      // return content;
+
+
+      content = 
+        this.$sanitize(content, 
+        {
+          allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
+          allowedAttributes:
+          {
+            'span': ['contenteditable'], 
+            'a':['href']
+          },
+          // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
+          allowedClasses:{
+            'span': [ 'hashTagText' ], 
+            'strong': ['highlightText']
+          },
+        });         
+        // this.$sanitize(content, 
+        // {
+        //   allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'img', 'span', 'table']),
+        //   allowedClasses: {
+        //     'span': [ 'hashTagText' ]
+        //   },
+        // });    
+        return content;  
+    },
+    getEditable()
+    {
+      return this.allowEdit;
+    },
     getSectionText()
     {
       if (this.allowEdit)
@@ -371,7 +343,7 @@ export default
     {
       get() 
       {
-          return this.section.sections;
+        return this.section.sections;
       },
       // need this mutation for fging
       set(sections) 
@@ -454,32 +426,165 @@ export default
   },
   methods:
   {
+    // initializeSection()
+    // {
+    //   // console.log('initializeSection',this.section.id, this.section.text);
+    //   this.sectionText = this.section.text;
+    //   this.sectionHtml = "BBB";//
+    //   console.log('this.section.html', this.section.html);
+
+    //   return true;
+    // },
+    clickShowSectionMenu(event)
+    {
+      if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
+      {
+        this.$store.commit('setCurrentOpenSectionMenuId', null);
+      }
+      else
+      {
+        this.$store.commit('setCurrentOpenSectionMenuId', this.section.id);  
+      }
+      
+      // this.menuSelected=true;
+    },
+    runSanitizer(content)
+    {
+      var parser = new Sanitizer.HtmlWhitelistedSanitizer(true);
+      var sanitizedHtml = Sanitizer.sanitizeString(parser, content);
+      // output_as_string.textContent = sanitizedHtml;
+      // output_as_node.innerHTML = sanitizedHtml;
+      return sanitizedHtml;
+
+    },    
     dragOptions()
     {
       return Common.DragOptions;
-    },    
-    inputText()
+    }, 
+    pasteContent(event)
+    {
+      // console.log(event);
+      // event.preventDefault();
+      // document.execCommand('inserttext', false, event.clipboardData.getData('text/plain'));
+      // console.log('pasted: '+ event.clipboardData.getData('text/plain'));
+    },  
+    inputText(event)
     { 
       Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
+      this.addUndo(event);
     },
-    // checkHighlightedText(event)
-    // {
-    //   if (!this.selectedRange.empty)
-    //   {
-    //     var clientRectangles = this.selectedRange.getClientRects();
-    //     for(var i = 0 ; i < clientRectangles.length ; i++) {
-    //       if(event.pageX >= clientRectangles[i].left && event.pageX <= clientRectangles[i].right &&
-    //          event.pageY >= clientRectangles[i].top  && event.pageY <= clientRectangles[i].bottom
-    //         ) 
-    //       {
-    //         //show the pop up
-    //         console.log('Show menu');
-    //         break;
-    //       }
-    //     }
+    sectionChanged()
+    {
+      return (this.section.html!=this.$refs.section_text.innerHTML);
+    },
+    getUndo()
+    {
+      if (!this.section.undo)
+      {
+        this.section.undo=[];
+        this.section.undo.latestIndex = -1;        
+      }
+      return this.section.undo;
+    },
+    addUndoItem(undo, undoContent)
+    {
+      if (!undo)
+      {
+        return;
+      }
 
-    //   }
-    // },
+      if (undo.latestIndex<Common.MAX_UNDO_ITEMS)
+      {
+        undo.latestIndex+=1;
+        // this.section.undo.push( { html: this.$refs.section_text.innerHTML, timestamp: Date() } );  
+      }
+      else
+      {
+        undo.latestIndex=0;
+      }
+      undo.splice(undo.latestIndex, 1,  { content: undoContent, timestamp: Date() } );  
+    },
+    addUndo(event)
+    {
+      var undo = this.getUndo();
+      if (this.sectionChanged())
+      {
+        this.addUndoItem(undo, this.$refs.section_text.innerHTML);
+      }
+    },
+    getLastUndoItem()
+    {
+      var undo = this.getUndo();
+      if (undo.length>1)
+      {
+        var lastIndex=0;
+        var potentialUndo=null, currentUndo=null;
+        var undoItem = undo[undo.latestIndex];
+
+        if (undo.latestIndex>1)
+        {
+          potentialUndo = undo[undo.latestIndex-1];
+          currentUndo = undo[undo.latestIndex];          
+          lastIndex = undo.latestIndex-1;
+          // lastIndex= undo.latestIndex-1;
+        }
+        else if (undo.latestIndex==0 && undo.length==(Common.MAX_UNDO_ITEMS-1))
+        {
+          //loop to top?
+          potentialUndo = undo[Common.MAX_UNDO_ITEMS-1];
+          currentUndo = undo[0];
+          lastIndex = Common.MAX_UNDO_ITEMS-1;
+        }
+
+        if ( potentialUndo && (potentialUndo.timestamp <= currentUndo.timestamp) )
+        {
+          undo.latestIndex = lastIndex;
+          undoItem = potentialUndo;
+        }       
+
+        return undoItem.content;
+        // if (this.section.undo && this.section.undo[last])
+        // {
+        //   this.$refs.section_text.innerHTML = this.section.undo[last].html;
+        //   if (this.section.undo.latestIndex>0)
+        //   {
+        //     this.section.undo.latestIndex--;          
+        //   }
+        //   else
+        //   {
+        //     this.section.undo.latestIndex==20; 
+        //   }
+        // }        
+      }
+    },
+    undoLast()
+    {
+      console.log('undo');
+      var item = this.getLastUndoItem();
+      if (item)
+      {
+        this.$refs.section_text.innerHTML = item;  
+      }
+      
+      // if (this.section.undo.length>0)
+      // {
+      //   var last = this.section.undo.latestIndex-1;
+
+      //   if (this.section.undo && this.section.undo[last])
+      //   {
+      //     this.$refs.section_text.innerHTML = this.section.undo[last].html;
+      //     if (this.section.undo.latestIndex>0)
+      //     {
+      //       this.section.undo.latestIndex--;          
+      //     }
+      //     else
+      //     {
+      //       this.section.undo.latestIndex==20; 
+      //     }
+      //   }        
+      // }
+
+    },
     clearSelectedText()
     {
       if (window.getSelection) 
@@ -496,37 +601,41 @@ export default
       //this.selectedRange.commonAncestorContainer;        
     },
     getSelectedText(event) 
-    {
+    {      
       if (window.getSelection().rangeCount==0)
       {
         return;
       }
+
+      var pos = TextFormatter.getCaretPixelPos(event.target);
+      this.lastOffsetY = pos.top;
+
       this.selectedRange = window.getSelection().getRangeAt(0);
-      
       this.selectedNode = this.selectedRange.commonAncestorContainer;  
       this.selectedBeginNode = this.selectedRange.startContainer;  
       this.selectedEndNode = this.selectedRange.endContainer;  
       this.selectedElement = event.target;   
 
       this.$emit('selected-text', event, { section: this.section, node: this.selectedNode, range: this.selectedRange });
+      // console.log(this.selectedRange.startOffset, this.selectedRange.startContainer, this.selectedRange.endOffset, this.selectedRange.endContainer );
       if (this.selectedRange.startOffset!=this.selectedRange.endOffset)
       {
         // console.log('showFormatMenu');
-        this.showFormatMenu=true;
+        this.formattingStarted();
+        // this.showFormatMenu=true;
       }
       else
       {
-        this.showFormatMenu=false;
+        this.formattingEnded();
+        // this.showFormatMenu=false;
       }
       // console.log('getSelectedText', this.selectedNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       var el = event.target;
       el.focus();
-
-
     },
     selectText(begin, end, startPos, endPos) 
     {
-
+      this.clearSelectedText();
       var range = document.createRange();
       var sel = window.getSelection();
       
@@ -536,110 +645,49 @@ export default
       // range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);      
-
-        // Chrome / Firefox
-        // console.log('selecttext',el.selectionStart);
-        // if (typeof (el.selectionStart) != "undefined") 
-        // {
-        //     console.log('chrome');
-        //     el.focus();
-        //     el.selectionStart = startPos;
-        //     el.selectionEnd = endPos;
-        //     return true;
-        // }
-        // // IE
-        // if (document.selection && document.selection.createRange) {
-        // console.log('ie', el);
-        //     el.focus();
-        //     el.select();
-        //     var range = document.selection.createRange();
-        //     range.collapse(true);
-        //     range.moveEnd("character", endPos);
-        //     range.moveStart("character", startPos);
-        //     range.select();
-        //     return true;
-       // }
     },    
     convertToPlainText(event)
     {
-
-      this.$refs.section_text.innerHTML = this.$refs.section_text.innerText;
+      this.$refs.section_text.innerHTML = this.getSectionText_();//this.$refs.section_text.innerText;
       this.saveContents(this.$refs.section_text); 
     },
-    formatToPlainText(event, type)
+    formattingStarted()
     {
-     // console.log('formatText',type, this.selectedNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
-      this.selectText(this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
-      var start = this.selectedRange.startOffset;
-      var end = this.selectedRange.endOffset;
-      var node = this.selectedNode;
-
-      // var sel = window.getSelection();
-      // console.log(sel);
-//       if (this.selectedRange.startContainer==this.selectedRange.endContainer)
-//       {
-
-//       }
-//       var text = this.selectedRange.startContainer.textContent.substring(start, end);
-// console.log(text);
-      // text = this.selectedRange.startContainer.textContent.substring(start, end));  
-
-      document.execCommand('copy' , false , null);
-      // console.log(navigator.clipboard.readText());
-      // console.log(e.clipboardData.getData('text/plain');
-
-
-      this.checkAndQueueDeltaChange(this);
-      var range = document.createRange();
-      var sel = window.getSelection();
-
-      var el = this.$refs.section_text;
-      range.collapse(true);      
-
-      sel.removeAllRanges();
-      sel.addRange(range);
-      
-      el.focus(); 
-
-      this.section.html= this.$refs.section_text.innerHTML;
-      this.section.text= this.$refs.section_text.innerText;
+      this.formattingInProgress=true;
+      // this.$store.commit('setFormattingStarted', this.section.id);
     },
-    formatText(event, type)
+    formattingEnded()
     {
-      // console.log('selectedRange', this.selectedRange);
-      // var el = this.$refs.section_text;
-      // el.focus(); 
+      this.formattingInProgress=false;
+      // this.$store.commit('setFormattingEnded', this.section.id);
+    },
+    isFormattingInProgress()
+    {
+      return this.formattingInProgress;
+      // var progress = this.$store.getters.getIsFormattingInProgress;
+
+      // if (progress.sectionId == this.section.id && progress.inProgress)
+      // {
+      //   return true;
+      // }
+      // return false;
+      
+    },    
+    formatText(event, type)
+    {      
       this.selectText(this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       var start = this.selectedRange.startOffset;
       var end = this.selectedRange.endOffset;
       var node = this.selectedNode;
 
-      // event.preventDefault();
-      // event.stopPropagation();  
-      // this.selectText(this.selectedRange.startOffset, this.selectedRange.endOffset);
-      // console.log('formatText',type, this.selectedBeginNode, this.selectedEndNode, this.selectedRange.startOffset, this.selectedRange.endOffset);
       document.execCommand(type , false , null);
 
-      // console.log(this.selectedNode.parentNode);
-      // this.startPolling();
+      // this.formattingEnded();
       this.checkAndQueueDeltaChange(this);
       var range = document.createRange();
       var sel = window.getSelection();
 
       var el = this.$refs.section_text;
-      // console.log(el.childNodes);
-      // for (var i=0; i<el.childNodes.length; i++)
-      // {
-      //   var child = el.childNodes[i];
-      //   console.log(child);
-      //   // if (child.className==Common.TagContentClass)
-      //   // {
-      //   //   range.setStart(el.childNodes[i+1], 1);
-      //   //   range.collapse(true);      
-      //   // }
-      // }
-
-      // range.setStart(this.selectedEndNode, this.selectedRange.endOffset);
       range.collapse(true);      
 
       sel.removeAllRanges();
@@ -647,25 +695,9 @@ export default
       
       el.focus(); 
 
-      // console.log(position);
+      // this.section.html= this.$refs.section_text.innerHTML;
+      // this.section.text= this.$refs.section_text.innerText;
 
-      this.section.html= this.$refs.section_text.innerHTML;
-      this.section.text= this.$refs.section_text.innerText;
-
-      // console.log('SELECT TEXT', node);
-      // range.setStart(begin, startPos);
-      // range.setStart(this.selectedEndNode, this.selectedRange.endOffset);
-      // range.setEnd(this.selectedEndNode, this.selectedRange.endOffset);
-      // range.collapse(true);
-      // sel.removeAllRanges();
-      // sel.addRange(range); 
-      // this.section.text = target.innerText;
-      // this.section.html = target.innerHTML;                
-
-      // var element = this.selectedElement;
-      // element.focus();
-      // this.clearSelectedText();
-      // console.log('formatText After', this.selectedNode,   this.selectedRange.startOffset, this.selectedRange.endOffset);
     },
     highlight (string, query) 
     {
@@ -701,20 +733,21 @@ export default
     },
     checkAndQueueDeltaChange(self)
     {
-      if (self.$refs.section_text==null) //during a move, this section can disappear and reappear in new position
+      if (self.$refs.section_text==null || this.inSearchMode()) //during a move, this section can disappear and reappear in new position
       {
         return;
       }
 
-      if (self.lastKeyDownEvent && self.section.html!=self.lastKeyDownEvent.target.innerHTML) 
-      {
-        this.textChanged(self.section, self.lastKeyDownEvent.target.innerText, self.lastKeyDownEvent.target.innerHTML);
-        self.lastKeyDownEvent=null;
-      }
-      else if (self.$refs.section_text.innerHTML!=self.section.html)
-      {
-        this.textChanged(self.section, self.$refs.section_text.innerText, self.$refs.section_text.innerHTML);
-      }
+      this.textChanged(self.section, self.$refs.section_text.innerText, self.$refs.section_text.innerHTML);
+      // if (self.lastKeyDownEvent && self.section.html!=self.lastKeyDownEvent.target.innerHTML) 
+      // {
+      //   this.textChanged(self.section, self.lastKeyDownEvent.target.innerText, self.lastKeyDownEvent.target.innerHTML);
+      //   self.lastKeyDownEvent=null;
+      // }
+      // else if (self.$refs.section_text.innerHTML!=self.section.html)
+      // {
+      //   this.textChanged(self.section, self.$refs.section_text.innerText, self.$refs.section_text.innerHTML);
+      // }
       return;
     },
     getTags(text, separator)
@@ -847,7 +880,7 @@ export default
         let children = Array.from(element.childNodes)
 
         children.forEach(child => {
-          console.log(child);
+          // console.log(child);
             if (child.className==Common.HashTagTextClass)
             {
               console.log('found tag');
@@ -877,79 +910,6 @@ export default
       }
       return
     },
-    markTags(element, html, separator) 
-    {
-      var whiteSpace = "&#8203;"; 
-      // var childs = element.childNodes;
-
-      // for (var i = 0; i < childs.length; i++) 
-      // {
-      //   if (childs[i].className==Common.TagContentClass)
-      //   {
-      //     continue;
-      //   }
-      //   console.log(childs[i].innerHTML); 
-      //   if (childs[i].innerHTML)
-      //   {
-      //     childs[i].innerHTML = childs[i].innerHTML.replace(/#(\w+)/g,
-      //     " <span class='" + Common.TagContentClass + "'><span class='" +
-      //     Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
-      //     // console.log(childs[i].textContent);          
-      //   }
-
-      // }
-      // console.log('before',html);
-      // (?<!y)x
-      ///\s#(\S*)/g,
-      // let re = new RegExp('(?<!y)x');
-      // var re = new RegExp('/\s#(\S*)/g');
-      // html = html.replace(/\s#(\S*)/g,
-      //   " <span class='" + Common.TagContentClass + "'><span class='" +
-      //   Common.HashTagTextClass + "'>#$1</span>" + "<span class='" + Common.TagContentNubClass +  
-      //   "'></span></span>"+ whiteSpace
-      // );
-
-      // html = html.replace(/\s#(\S*)/g,
-      //   " <span class='" + Common.TagContentClass + "'><span class='" +
-      //   Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
-      
-      // html = html.replace("<br>#", "<br> #");
-      // html = html.replace(/\u00A0/g, '');
-
-      // this.markHtml(element, 'false'); 
-
-      html = html.replace(/&nbsp;/g, ' ');
-      // html = html.replace('<br>', ' '); //for firefox only
-      // console.log('replace br', html);
-      // this.removeTrailingLinebreak(element);
-      var tagId = "tag_"+this.getNewTagId();
-      html = html.replace(/\s#(\S*)/g,
-        " <span id='"+tagId+"' contenteditable='false' class='" + Common.HashTagTextClass + "'>#$1</span>"+whiteSpace);
-      // html = html.replace(/#(\w+)/g,
-      //   " <span class='" + Common.TagContentClass + "'><span class='" +
-      //   Common.HashTagTextClass + "'>#$1</span></span>"+ whiteSpace);
-      // var hash= "<span class='hashGrey'>#</span>";
-      // var tagId = "tag_"+this.getNewTagId();
-      // html = html.replace(/#(\w+)/g, 
-      //         hash+"<span id='"+tagId+"' class='" + Common.HashTagTextClass + "'>$1</span>"+ whiteSpace);
-
-
-      //Contentnoteditable
-      // var hash= "<span class='hashGrey'>#</span>";
-      // var tagId = "tag_"+this.getNewTagId();
-      // html = html.replace(/#(\w+)/g, 
-      //         "<span id='"+tagId+"' contenteditable='false' class='" + Common.HashTagTextClass + "'>$1</span> ");
-
-
-      // html = html.replace(/(^|\s)(#[a-z\d-]+)/ig,
-      //   "$1<span class='" +
-      //   Common.HashTagTextClass + "'>$2</span>"+ whiteSpace);
-      
-
-      
-      // console.log('after',html);
-      return { html: html, tagId: tagId};
-    },  
     getNewTagId()
     {
         var id = uuid.v4();
@@ -970,7 +930,12 @@ export default
       if (!this.inSearchMode())
       {
         var tags = this.processTags(section, text, html);
-        Operations.textChangeOp(this.$store, section, text, html, tags);  
+        Operations.textChangeOp(this.$store, section, text, html, tags); 
+
+        //update the section for searches later
+        // console.log('section text changed');
+        // this.section.text = this.$refs.section_text.textContent;
+        // this.section.html = this.$refs.section_text.innerHTML; 
       }
       else
       {
@@ -1021,6 +986,14 @@ export default
       
       return includes;
     },    
+    getSectionText_()
+    {
+      return this.$refs.section_text.textContent;
+    },
+    getSectionHtml_()
+    {
+      return this.$refs.section_text.innerHTML;
+    },    
     includesSearch(section)
     {
       var includesSearch=false;
@@ -1034,7 +1007,6 @@ export default
           section.searchHtml = this.highlight(section.html, this.searchText);
         }    
       }
-
       return includesSearch;
     },
     openCloseSection(event)
@@ -1055,139 +1027,161 @@ export default
     },
     emitKeyPress(event,section)
     {
-      this.$emit('special-key-pressed', event, section)
+      this.$emit('special-key-pressed', event, section);
+    },
+    emitBackspaceAtBegin(event, section)
+    {
+      this.$emit('backspace-begin-section', event, section);
     },
     emitKeyDownPress(event, eventType, section)
     {
       this.$emit('special-key-down-pressed', event, eventType, section)
     },    
+    emitEnterDownPress(event, section, textContent, innerHTML)
+    {
+      this.$emit('enter-key-pressed', event, section, textContent, innerHTML);
+    },      
     resetSearchText()
     {
       this.$store.commit('setSearchText', "");
     },
-    startMarking()
+    startTagMarking()
     {
       this.tagStarted=true;
     },
-    endMarking()
+    endTagMarking()
     {
       this.tagStarted=false;
     },    
+    resetTagText()
+    {
+      this.tagText=Common.Key_Hash;
+    },
+    addToTagText(key)
+    {
+      this.tagText+=key;
+      return true;
+    },
+    endOrContinueTagMarking(character)
+    {
+      // var charactersToStop = ;
+      if (Common.CharactersStopTagMarking.includes(character))
+      {
+        this.endTagMarking();
+      }
+      return;
+    },
+    insertTag()
+    {
+      if (this.tagStarted)
+      {
+        this.endTagMarking();
+
+        var curPosition = TextFormatter.currentPosition();
+
+        var lastHashtag = TextFormatter.getOffsetOfLastCharacter(curPosition, Common.HashTag); 
+        if (lastHashtag.found)
+        {
+          // TextFormatter.deleteText(curPosition, ((this.tagText.length)*-1) ); 
+          var tagText = lastHashtag.tag;
+          TextFormatter.deleteText(curPosition, (tagText.length)*-1 ); 
+          var tagElement = TextFormatter.insertElementAt(curPosition, 'span', tagText, Common.HashTagTextClass); 
+          tagElement.contentEditable = 'false';
+
+          this.setTagClick();
+        }
+      }
+    },
+    processKeyUpOrDown(event, isUp)
+    {
+      var eventType=Common.KeyEventTypes.Up;;
+      if (!isUp)
+      {
+        eventType = Common.KeyEventTypes.Down;
+      }
+      //find if we're at the top of the section or bottom by checking if the caret moves and then move up or down
+      var pos = TextFormatter.getCaretPixelPos(event.target);
+      this.lastOffsetY = pos.top;        
+      Common.sleep(5).then(() => 
+      {
+        var pos = TextFormatter.getCaretPixelPos(event.target);
+        if (this.lastOffsetY==pos.top || this.between(this.lastOffsetY, pos.top-Common.MaxOff, pos.top+Common.MaxOff))
+        {
+          this.emitKeyDownPress(event, eventType, this.section);  
+        }          
+        else
+        {
+          this.lastOffsetY=pos.top;
+        }
+      });
+    },
     keyDownMonitor(event)
     {
       this.resetSearchText();
-      // console.log('keydown', event.target.innerHTML);  
-      if (event.key==" ")
+      this.endOrContinueTagMarking(event.key);
+
+      if (event.key==Common.Key_Up && !this.shiftPressed)
       {
-        if (this.tagStarted)
-        {
-          this.endMarking();
-          var tags = this.markTags(event.target, event.target.innerHTML, '#'); 
-          // console.log(tags);
-          event.target.innerHTML = tags.html;   
-
-          this.removeTrailingLinebreak(event.target);
-          TextFormatter.setCaretToEndOfElementById(tags.tagId);
-
-          this.setTagClick();
-
-          // var position = TextFormatter.getCaretPosition(event.target);
-          // console.log(position);
-          // event.target.innerHTML[position.caretOffset]='A';
-          // console.log(position);
-
- 
-          // TextFormatter.SetCaretPositionEndOfTag(event.target, Common.HashTagTextClass);
-
-          // var text = document.createTextNode(" ");
-          // document.getElementById(tags.tagId).appendChild(text);
-          
-          // TextFormatter.setStartOrEndOfElement(text, false);;
-          // TextFormatter.setCaretPos(event.target, position);
-          // TextFormatter.setCaretPosition(event.target, position);
-
-
-          // TextFormatter.SetCaretPositionEndOfTag(event.target, Common.HashTagTextClass);
-        }
-        else
-        {
-          Common.sleep(100).then(() => 
-          {
-            // setCaretPositionSpace(event.target, this);
-          });            
-        }
-        // this.removeTrailingLinebreak(event.target);
-
+        this.processKeyUpOrDown(event, true);
+        // event.stopPropagation(); 
+        // event.preventDefault();        
       }
-      // else if (event.key==" ")
-      // {
-      //   console.log('space');
-      //   // event.preventDefault();
-      //   // event.stopPropagation();  
-
-      //   // event.target.insertAdjacentHTML('beforeend', '&nbsp;');
-      //   // var sel = window.getSelection();
-
-      //   // if (sel.anchorNode.parentNode.className==Common.HashTagTextClass)
-      //   // {
-
-
-      //   // }
-      //   // // this.markTags(event.target, event.target.innerHTML, '#'); 
-      //   Common.sleep(100).then(() => 
-      //   {
-      //     SetCaretPositionSpace(event.target);
-      //   });          
-        
-      //   // var position = SetCaretPositionEndOfTag(event.target);
-
-      //   // event.target.innerHTML +="&nbsp;";
-      //   // Common.SetCaretPositionEndOfTag(event.target, position);
-      // }
-      else if (event.key=="#" )
+      else if (event.key==Common.Key_Down &&  !this.shiftPressed)
+      {
+        this.processKeyUpOrDown(event, false);
+      }      
+      else if (event.key==Common.Key_Space)
+      {
+        this.insertTag();
+      }
+      else if (event.key==Common.Key_Hash )
       {   
-        // event.preventDefault();
-        // event.stopPropagation();          
-        this.startMarking();
-        // this.startHashTag();
+        this.startTagMarking();
+        // this.resetTagText();
       }
-      else if (event.key=="Shift" )
+      else if (event.key==Common.Key_Shift )
       {        
         this.shiftPressed = true;
       }
+      else if (event.key==Common.Key_Control )
+      {        
+        this.ctrlPressed = true;
+      }
+      else if (event.key.toLowerCase()=='z' && this.ctrlPressed)
+      {        
+        this.undoLast();
+      }      
       else if (this.shiftPressed!=true && event.key=="Tab")
-      {
-        //moving this section, so save the text first
-        this.saveContents(event.target);  
+      {     
+        this.commitContentsToSection();
         this.emitKeyDownPress(event, 'tab', this.section);
       }
       else if (this.shiftPressed && event.key=="Tab")
       {
         //moving this section, so save the text first
-        this.saveContents(event.target);
+        this.commitContentsToSection();
         this.emitKeyDownPress(event, 'shift_tab', this.section);
       }
       else if (this.shiftPressed && event.key=="Enter")
       {
-        // console.log('shift enter');
         this.emitKeyDownPress(event, 'shift_enter', this.section);
-        // Common.sleep(100).then(() => 
-        // {
-        //   setLastLineBreak(event.target, this);
-        // });          
       }      
       else if (!this.shiftPressed && event.key=="Enter")
       {
+        console.log('key down enter');
+        // this.commitContentsToSection();        
+        this.emitEnterDownPress(event, this.section, this.$refs.section_text.textContent, this.$refs.section_text.innerHTML);
         if (event) event.preventDefault();
         if (event) event.stopPropagation();  
+        
       }
       else if (event.key=="Backspace")
       {
         var result = TextFormatter.DeleteNonContentEditable(event.target);
-        // console.log(result);
         if (result)
         {
           event.preventDefault();
+          event.stopPropagation();  
         }
         else
         {
@@ -1196,21 +1190,85 @@ export default
           {
             this.sectionIsDeleted=true;
             this.emitKeyDownPress(event, 'backspace-blank-section', this.section);
-          }          
+            event.stopPropagation(); 
+            event.preventDefault();
+          }    
+          else
+          {
+            //find if we're at the beginning of the section or bottom by checking if the caret moves and then section up
+            var pos = TextFormatter.getCaretPixelPos(event.target);
+            this.lastOffsetX = pos.left;
+            this.lastOffsetY = pos.top;
+            
+            Common.sleep(Common.DefaultDebounceInMS).then(() => 
+            {
+              var pos = TextFormatter.getCaretPixelPos(event.target);
+              if (this.lastOffsetX==pos.left && this.lastOffsetY==pos.top)
+              {
+                this.sectionIsDeleted=true;
+                this.commitContentsToSection();
+                this.$emit('backspace-begin-section', event, this.section);
+
+                // event.preventDefault();
+                // event.stopPropagation();                  
+                // this.emitKeyDownPress(event, 'backspace-begin-section', this.section);  
+              }          
+              else
+              {
+                this.lastOffsetX=pos.left;
+                this.lastOffsetY = pos.top;
+              }
+            });            
+          }      
         }
-      }  
-    },    
-    keyMonitor(event) 
+      }
+    },  
+    between(c, a, b) {
+      var min = Math.min.apply(Math, [a, b]),
+      max = Math.max.apply(Math, [a, b]);
+      return c > min && c < max;
+    },
+    commitContentsToSection()
+    {
+      if (!this.inSearchMode() && this.$refs.section_text)
+      {
+        this.section.text = this.$refs.section_text.innerText;
+        this.section.html = this.$refs.section_text.innerHTML;           
+      }
+    },
+    keyUpMonitor(event) 
     {  
       this.lastKeyDownEvent = event;
       this.startPolling();      
-      if (event.key=="Enter" && !this.shiftPressed)
+
+      //shift-enter would be to add a line break to the content. We only want to catch Enter 
+      //to add a new section
+      if (event.key==Common.Key_Up)
       {
+        // this.emitKeyDownPress(event, Common.KeyEventTypes.Up, this.section);
+        // event.stopPropagation(); 
+        // event.preventDefault();        
+      }
+      else if (event.key==Common.Key_Down)
+      {
+        // this.emitKeyDownPress(event, Common.KeyEventTypes.Down, this.section);  
+        // event.stopPropagation(); 
+        // event.preventDefault();        
+      } 
+      else if (event.key=="Enter" && !this.shiftPressed)
+      {
+        console.log('keyup enter');
+        // event.stopPropagation(); 
+        // event.preventDefault();         
         this.emitKeyPress(event, this.section);
       }  
       else if (event.key=="Shift")
       {
         this.shiftPressed=false; 
+      }
+      else if (event.key==Common.Key_Control)
+      {
+        this.ctrlPressed=false;
       }
       else
       {
@@ -1224,28 +1282,19 @@ export default
       self.lastKeyDownEvent=null;
       if (event.target.id==this.section.id)
       {
-        if (this.sectionIsDeleted==false)
-        {
-          // this.markHtml(event.target, 'false'); 
+        if (!this.sectionIsDeleted)
+        {                  
+          this.commitContentsToSection();
           this.saveContents(event.target);  
           this.$emit('section-in-blur', event, this.section, this.depth);
         }
       }
     },
-    setSectionHTML(target)
-    {
-      this.section.text = target.innerText;
-      this.section.html = target.innerHTML;
-    },
     saveContents(target)
     {
       if (!this.inSearchMode())
-      {
+      {                
         this.checkAndQueueDeltaChange(this);
-        this.setSectionHTML(target);
-        var tags = this.markTags(target, this.section.html, '#');
-        this.section.html = tags.html;
-
         this.$emit('save-section');   
 
         return true;
@@ -1257,12 +1306,18 @@ export default
     },
     focusSection() //when the section is focused, emit an event
     {
+      // console.log('in focus', this.section);;
+      this.commitContentsToSection();
       this.$emit('section-in-focus', event, this.section, this.depth)
     },
     sectionInFocus(event, section, depth) //when a focus signal is received, pass it up the chain
     {
       // this.markHtml(event.target, 'true'); 
       // event.target.innerHTML+=" ";
+      // if (!this.isFormattingInProgress())
+      // {
+      //   this.showFormatMenu=false;
+      // }      
       //percolate a section in focus up the parents
       this.$emit('section-in-focus', event, section, depth);
     },
@@ -1300,6 +1355,7 @@ export default
     {
       var draggedSection = this.getDraggedSection(event);
       var parentSection = this.section; 
+
 
       Operations.dragSectionOp(this.$store, 
         draggedSection, 

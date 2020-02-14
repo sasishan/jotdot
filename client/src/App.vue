@@ -56,10 +56,25 @@ export default
 </script>
 
 <style>
-#app {
+#app_Backup {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  font-weight:400;
+}
+
+#app{
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Roboto","Oxygen","Ubuntu","Fira Sans","Droid Sans","Helvetica Neue",sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  font-weight:400;
+}
+
+table, th, td  {
+    border-spacing: 2px;
+    border: 1px solid grey;
 }
 
 .dragClass

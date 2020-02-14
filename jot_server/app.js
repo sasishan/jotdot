@@ -8,7 +8,7 @@ var config = require('./config'),
   bodyParser = require('body-parser'),
   cognitoExpress = require('cognito-express'),
   //ROUTES
-  Operations = require('./routes/operations'),
+  Operations = require('./routes/Operations'),
   APIs = require('./routes/APIs'),
   Database = require('./Database/Database');
 

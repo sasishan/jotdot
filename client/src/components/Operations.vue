@@ -59,6 +59,7 @@ export default
 	},		
 	dragSectionOp(store, sectionToMove, fromParent, newParent, newIndex)
 	{
+		console.log('dragSectionOp', sectionToMove, fromParent, newParent, newIndex);
     	var operation = 
 	      	{
 	      		type: OpsConfig.ValidClientOperations.MoveSection,   
@@ -78,16 +79,17 @@ export default
         	var position;
         	if (newIndex==Common.APPEND_SECTION || newIndex>=newParent.sections.length)
         	{
-    			// console.log('1');
+    			console.log('a');
         		this.addExistingSection(sectionToMove, newParent);
         		position = newParent.sections.length-1;		
         	}
         	else
         	{
+        		console.log('b');
         		position=newIndex;
         		this.addExistingSection(sectionToMove, newParent, newIndex);		
         	}
-
+        	console.log('moveSectionOps', sectionToMove);
 			var operation = 
 				{
 					type: OpsConfig.ValidClientOperations.MoveSection,   

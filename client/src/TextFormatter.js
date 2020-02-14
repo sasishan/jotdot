@@ -64,23 +64,65 @@ TextFormatter.deleteText = function(position, offsetFromCurrent)
   } 
 }
 
-TextFormatter.getFirstHalf = function(position)
+TextFormatter.setFirstHalf=function(node, offset, parent, element) 
 {
-  // console.log(position);
-  if (position.node)
-  {
-    var node = position.node;
-    var content = node.textContent;
-    var firstHalf = content.substring(0, position.offset);
-    // var secondHalf = content.substring(position.offset, content.length);
-    
-    node.textContent = firstHalf;
+  // var parentOffset = TextFormatter.getNodeIndex(parent, limit);
 
-    return node;
-    // var newPosition = {node: node, offset: position.offset};
-    // TextFormatter.setCaretPosition(newPosition);
-  } 
+  var doc = node.ownerDocument;  
+  var leftRange = doc.createRange();
+  leftRange.setStart(parent, 0);
+  leftRange.setEnd(node, offset);
+  var left = leftRange.extractContents();
+  element.appendChild(left);//, limit);
+  // return para;
+  
 }
+
+TextFormatter.setSecondHalf=function(node, offset, parent, element) 
+{
+  // var parentOffset = TextFormatter.getNodeIndex(parent, limit);
+
+  console.log('node',node);
+  var doc = node.ownerDocument;  
+  var leftRange = doc.createRange();
+  leftRange.selectNodeContents(parent);
+  var left = leftRange.extractContents();
+  // leftRange.setEnd(node, offset);
+  // var right = leftRange.deleteContents();
+  element.appendChild(left);//, limit);
+  
+}
+
+TextFormatter.getNodeIndex=function(parent, node) 
+{
+  var index = parent.childNodes.length;
+  while (index--) 
+  {
+    if (node === parent.childNodes[index]) 
+    {
+      break;
+    }
+  }
+  return index;
+}
+
+// TextFormatter.getFirstHalf = function(position)
+// {
+//   // console.log(position);
+//   if (position.node)
+//   {
+//     var node = position.node;
+//     var content = node.textContent;
+//     var firstHalf = content.substring(0, position.offset);
+//     // var secondHalf = content.substring(position.offset, content.length);
+    
+//     node.textContent = firstHalf;
+
+//     return node;
+//     // var newPosition = {node: node, offset: position.offset};
+//     // TextFormatter.setCaretPosition(newPosition);
+//   } 
+// }
 
 TextFormatter.getLatterHalf = function(position)
 {

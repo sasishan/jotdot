@@ -45,7 +45,8 @@
       </transition-group>
     </draggable>
     <br>
-    <Notes_Add style="float:left" @add-section-click="addNewSection" v-if="haveDocWritePermissions && allowEdit && isLoaded==true" />  
+    <Notes_Add style="float:left" @add-section-click="addNewSection" v-if="haveDocWritePermissions && allowEdit && isLoaded==true" /> 
+    <div ref="scratchPad" id="scratchPad" style="visibility: hidden"></div> 
   </span>
   <span v-if="showTags==true">
     <Notes_Tags />
@@ -773,6 +774,7 @@ export default
     },  
     dragEnd(event)
     {
+      console.log('dragEnd',event);
       var draggedSection = this.getDraggedSection(event);
       var parentSection = this.getSectionById([this.currentMainSection], draggedSection.parentSection, false); 
 
@@ -873,7 +875,6 @@ export default
     },
     processEnterKey(event, section, textContent, innerHTML)
     {
-      console.log('processEnterKey', textContent);
       var newSectionInitialValue=null;
       var parentSection = this.getSectionById([this.currentMainSection], this.currentFocusedSection.parentSection, false);  
       var index = this.getSectionIndexById(parentSection.sections, this.currentFocusedSection.id);
@@ -888,29 +889,30 @@ export default
       var isAtBeginningOfSection = (caretPosition.caretOffset==0);
 
       // var curPosition = TextFormatter.currentPosition();
-      var isAtEndingOfSection = ( (caretPosition.range.endContainer.nextSibling==null) && 
-                                  (caretPosition.range.endContainer.textContent.length==caretPosition.caretOffset) ) ||
-                                 (  caretPosition.range.endContainer.nextSibling &&
-                                    caretPosition.range.endContainer.nextSibling.nodeName=="BR" && 
-                                    caretPosition.range.endContainer.nextSibling.nextSibling==null );
+      // var isAtEndingOfSection = ( (caretPosition.range.endContainer.nextSibling==null) && 
+      //                             (caretPosition.range.endContainer.textContent.length==caretPosition.caretOffset) ) ||
+      //                            (  caretPosition.range.endContainer.nextSibling &&
+      //                               caretPosition.range.endContainer.nextSibling.nodeName=="BR" && 
+      //                               caretPosition.range.endContainer.nextSibling.nextSibling==null );
+
+      var isAtEndingOfSection = (textContent.trim().length == caretPosition.caretOffset);
       // ( caretPosition.caretOffset==(section.text.length-1) );
       var sectionHasChildren = ( section.sections.length>0) ;
 
       // console.log('position', isAtEndingOfSection);
-      if (this.currentFocusedSection.open==false) 
+      if (isAtBeginningOfSection && textContent.trim()!="")
       {
-        toSection=parentSection.sections;
-        parent =parentSection;
-        position = index+1;        
-      }
-      else if (isAtBeginningOfSection)
-      {
-        // console.log('1');
         //Add section above the current one to this section
         toSection=parentSection.sections;
         parent =parentSection;
         position = index;
         // Operations.addSectionOp(this.$store, parentSection.sections, parentSection, index);
+      }
+      else if (this.currentFocusedSection.open==false) 
+      {
+        toSection=parentSection.sections;
+        parent =parentSection;
+        position = index+1;        
       }
       else if (isAtEndingOfSection && sectionHasChildren)
       {
@@ -921,29 +923,40 @@ export default
       else if (!isAtEndingOfSection && !isAtBeginningOfSection)
       {
         // console.log(innerHTML);
-
-        var firstHalfNode = document.createTextNode(textContent);
+        // var firstHalfNode = document.createTextNode(textContent);
         // firstHalfNode.innerHTML = innerHTML;
         // var secondHalfNode = document.createTextNode(textContent);
         // secondHalfNode.innerHTML = innerHTML;
 
-        firstHalfNode.textContent =  "AAAA";//textContent.substring(0, caretPosition.caretOffset);
-        console.log(firstHalfNode.innerHTML, firstHalfNode.textContent);
+        // firstHalfNode.textContent =  "AAAA";//textContent.substring(0, caretPosition.caretOffset);
+        // console.log(firstHalfNode.innerHTML, firstHalfNode.textContent);
 
-        // var curPosition = TextFormatter.currentPosition();
-        // TextFormatter.getFirstHalf(curPosition);
+        var curPosition = TextFormatter.currentPosition();
+        var scratchPad = document.getElementById('scratchPad');
+        scratchPad.innerHTML="";
+        TextFormatter.setFirstHalf(curPosition.node, curPosition.offset, element, scratchPad);
+        
+        // scratchPad.appendChild(left);
+        // console.log(left);
         // var secondHalfNode = TextFormatter.getLatterHalf(curPosition);
         // console.log('processEnterKey', node.textContent);
         // console.log('processEnterKey', section.html, section.text);
 
         //take the first half, split it out into its own section above the current one
         //use textcontent because the text cannot be committed without moving the caret position
-        newSectionInitialValue = textContent.substring(0, caretPosition.caretOffset);
-        var finalString = textContent.substring(caretPosition.caretOffset, textContent.length);
+        newSectionInitialValue = scratchPad.innerHTML;
+        scratchPad.innerHTML=""; 
 
-        section.html = finalString;//secondHalfNode.textContent;
-        section.text = finalString;// secondHalfNode.textContent;
+        TextFormatter.setSecondHalf(curPosition.node, curPosition.offset, element, scratchPad);     
+        // innerHTML.substring(0, caretPosition.caretOffset);
+        var finalString = textContent.substring(caretPosition.caretOffset, textContent.length);
+        // newSectionInitialValue = textContent.substring(0, caretPosition.caretOffset);
+        // var finalString = textContent.substring(caretPosition.caretOffset, textContent.length);
+
+        section.html = scratchPad.innerHTML;//secondHalfNode.textContent;
+        section.text = scratchPad.textContent;// secondHalfNode.textContent;
         section.sectionIsDeleted=false;
+        scratchPad.innerHTML=""; 
 
         document.getElementById(section.id).focus();
         toSection=parentSection.sections;
@@ -952,6 +965,7 @@ export default
       }
       else if (this.currentFocusedSectionDepth==0)
       {
+        console.log('4');
       
         // newSection = this.addSection(this.currentSelection, this.currentMainSection, index+1);
         toSection=this.currentMainSection.sections;

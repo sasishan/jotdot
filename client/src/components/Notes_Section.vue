@@ -42,24 +42,25 @@
       @paste="pasteContent"
       @blur = "blurSection($event, section)"> 
     </div>
-   <draggable v-model="getSections" :disabled="isMobile() || !allowEdit" @end="dragEnd" v-bind="dragOptions()">
-    <Notes_Section v-for="(section, index) in getSections" 
-      :section="section" 
-      :depth="depth+1" 
-      :allowEdit=allowEdit
-      :haveWritePermissions=haveWritePermissions
-      :searchText = 'searchText'
-      :offset="0"
-      v-if="(getOpenState) || allowEdit==false" 
-      @save-section="emitSaveSection"
-      @special-key-pressed="emitKeyPress"
-      @section-in-focus="sectionInFocus"
-      @section-in-blur="sectionBlurred"
-      @special-key-down-pressed="emitKeyDownPress"
-      @backspace-begin-section="emitBackspaceAtBegin"
-      @enter-key-pressed="emitEnterDownPress"
-      />     
-      </draggable>
+    <draggable v-model="getSections" :disabled="isMobile() || !allowEdit" @end="dragEnd" v-bind="dragOptions()">
+      <Notes_Section v-for="(section, index) in getSections" 
+        :section="section" 
+        :depth="depth+1" 
+        :allowEdit=allowEdit
+        :haveWritePermissions=haveWritePermissions
+        :searchText = 'searchText'
+        :offset="0"
+        v-if="(getOpenState) || allowEdit==false" 
+        @save-section="emitSaveSection"
+        @special-key-pressed="emitKeyPress"
+        @section-in-focus="sectionInFocus"
+        @section-in-blur="sectionBlurred"
+        @special-key-down-pressed="emitKeyDownPress"
+        @backspace-begin-section="emitBackspaceAtBegin"
+        @enter-key-pressed="emitEnterDownPress"
+        />      
+    </draggable>
+    
   </div>
 </template>
 
@@ -202,10 +203,12 @@ export default
   },
   computed: 
   {
+    showSeparator()
+    {
+      return (!this.allowEdit && this.getSections.length>0);
+    },
     showSectionMenu()
     {
-      // console.log(this.$store.getters.getCurrentOpenSectionMenuId, this.section.id);
-
       if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
       {
         return true;
@@ -223,6 +226,7 @@ export default
     getSectionContent()
     {
       var content="";
+
       if (this.allowEdit)
       {
         if (this.inSearchMode() && this.section.searchHtml)
@@ -244,19 +248,41 @@ export default
       }
       else
       {
-        content= '-  ' +this.section.html; 
+        content= '<li> ' +this.section.html +'</li>'; 
       }
 
       // return content;
       // console.log(sanitized)
       // return this.runSanitizer(content);
       // return content;
-
+// [ 'h3', 'h4', 'h5', 'h6', 'blockquote', 'p', 'a', 'ul', 'ol',
+//   'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
+//   'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe' ],
 
       content = 
         this.$sanitize(content, 
         {
-          allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
+          transformTags: {
+            'p': 'br',
+            'li': 'br',
+            'h1':'b',
+            'h1':'b',
+            'h2':'b',
+            'h3':'b',
+            'h4':'b',
+            'h5':'b',
+            'h6':'b',
+            'div':'span',
+          },
+          allowedTags: 
+            [ 
+              'h3', 'h4', 'h5', 'h6', 'blockquote', 
+              'p', 
+              'a',
+              'nl', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 
+              'div',
+              'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe', 'span', 'table', 'a' ],          
+          // this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
           allowedAttributes:
           {
             'span': ['contenteditable'], 
@@ -1234,6 +1260,7 @@ export default
       {
         this.section.text = this.$refs.section_text.innerText;
         this.section.html = this.$refs.section_text.innerHTML;           
+        this.checkAndQueueDeltaChange(this);
       }
     },
     keyUpMonitor(event) 
@@ -1349,10 +1376,12 @@ export default
     },
     getDraggedSection(event)
     {
+      console.log(this.section.sections);
       return (this.section.sections[event.newIndex]);
     },      
     dragEnd(event)
     {
+      console.log('dragEnd',event);
       var draggedSection = this.getDraggedSection(event);
       var parentSection = this.section; 
 
