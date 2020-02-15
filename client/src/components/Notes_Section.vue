@@ -259,41 +259,8 @@ export default
 //   'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
 //   'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe' ],
 
-      content = 
-        this.$sanitize(content, 
-        {
-          transformTags: {
-            'p': 'br',
-            'li': 'br',
-            'h1':'b',
-            'h1':'b',
-            'h2':'b',
-            'h3':'b',
-            'h4':'b',
-            'h5':'b',
-            'h6':'b',
-            'div':'span',
-          },
-          allowedTags: 
-            [ 
-              'h3', 'h4', 'h5', 'h6', 'blockquote', 
-              'p', 
-              'a',
-              'nl', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 
-              'div',
-              'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe', 'span', 'table', 'a' ],          
-          // this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
-          allowedAttributes:
-          {
-            'span': ['contenteditable'], 
-            'a':['href']
-          },
-          // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
-          allowedClasses:{
-            'span': [ 'hashTagText' ], 
-            'strong': ['highlightText']
-          },
-        });         
+      var sanitized = this.getSanitized(content);
+              
         // this.$sanitize(content, 
         // {
         //   allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'img', 'span', 'table']),
@@ -301,8 +268,9 @@ export default
         //     'span': [ 'hashTagText' ]
         //   },
         // });    
-        return content;  
+      return sanitized;  
     },
+
     getEditable()
     {
       return this.allowEdit;
@@ -461,6 +429,46 @@ export default
 
     //   return true;
     // },
+    getSanitized(content)
+    {
+      var c= 
+      this.$sanitize(content, 
+        {
+          transformTags: {
+            'p': 'br',
+            'li': 'br',
+            'h1':'b',
+            'h1':'b',
+            'h2':'b',
+            'h3':'b',
+            'h4':'b',
+            'h5':'b',
+            'h6':'b',
+            'div':'span',
+          },
+          allowedTags: 
+            [ 
+              'h3', 'h4', 'h5', 'h6', 'blockquote', 
+              'p', 
+              'a',
+              'nl', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 
+              'div',
+              'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe', 'span', 'table', 'a' ],          
+          // this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
+          allowedAttributes:
+          {
+            'span': ['contenteditable'], 
+            'a':['href']
+          },
+          // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
+          allowedClasses:{
+            'span': [ 'hashTagText' ], 
+            'strong': ['highlightText']
+          },
+        });  
+
+        return c; 
+    },    
     clickShowSectionMenu(event)
     {
       if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
@@ -490,12 +498,13 @@ export default
     pasteContent(event)
     {
       // console.log(event);
-      // event.preventDefault();
-      // document.execCommand('inserttext', false, event.clipboardData.getData('text/plain'));
+      event.preventDefault();
+      var content = this.getSanitized(event.clipboardData.getData('text/html'));
+      document.execCommand('insertHTML', false, content);
       // console.log('pasted: '+ event.clipboardData.getData('text/plain'));
     },  
     inputText(event)
-    { 
+    {       
       Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
       this.addUndo(event);
     },
@@ -782,7 +791,7 @@ export default
       var tagElements = this.$refs.section_text.getElementsByClassName(Common.HashTagTextClass);
       for (var i=0; i< tagElements.length; i++)
       {
-        tags.push(tagElements[i].innerText);
+        tags.push(tagElements[i].innerText.toLowerCase());
       }
       // var result = str.match(/<b>(.*?)<\/b>/g).map(function(val){
       //   return val.replace(/<\/?b>/g,'');
@@ -829,7 +838,7 @@ export default
       var hashTag = document.createElement("span");
       var tagId = "tag_"+this.getNewTagId();
       hashTag.id = tagId;
-      hashTag.textContent=text;
+      hashTag.textContent=text.toLowerCase();
       hashTag.className =Common.HashTagTextClass;
 
       return hashTag;
@@ -1111,7 +1120,7 @@ export default
           // TextFormatter.deleteText(curPosition, ((this.tagText.length)*-1) ); 
           var tagText = lastHashtag.tag;
           TextFormatter.deleteText(curPosition, (tagText.length)*-1 ); 
-          var tagElement = TextFormatter.insertElementAt(curPosition, 'span', tagText, Common.HashTagTextClass); 
+          var tagElement = TextFormatter.insertElementAt(curPosition, 'span', tagText.toLowerCase(), Common.HashTagTextClass); 
           tagElement.contentEditable = 'false';
 
           this.setTagClick();
@@ -1270,19 +1279,7 @@ export default
 
       //shift-enter would be to add a line break to the content. We only want to catch Enter 
       //to add a new section
-      if (event.key==Common.Key_Up)
-      {
-        // this.emitKeyDownPress(event, Common.KeyEventTypes.Up, this.section);
-        // event.stopPropagation(); 
-        // event.preventDefault();        
-      }
-      else if (event.key==Common.Key_Down)
-      {
-        // this.emitKeyDownPress(event, Common.KeyEventTypes.Down, this.section);  
-        // event.stopPropagation(); 
-        // event.preventDefault();        
-      } 
-      else if (event.key=="Enter" && !this.shiftPressed)
+      if (event.key=="Enter" && !this.shiftPressed)
       {
         console.log('keyup enter');
         // event.stopPropagation(); 
@@ -1299,8 +1296,11 @@ export default
       }
       else
       {
+        this.getSelectedText(event);
         this.$emit('content-key-pressed', event)
       }
+
+
 
     }, 
     blurSection(event, section) //when the section is blurred, emit an event and save the changes

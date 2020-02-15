@@ -11,7 +11,6 @@ TextFormatter.currentPosition = function(index=0)
     position.node = selection.startContainer;
     position.offset = selection.startOffset;
 
-    console.log(selection);
     // position.top = selection.offsetTop;
     // position.left = selection.offsetLeft;
 
@@ -73,6 +72,7 @@ TextFormatter.setFirstHalf=function(node, offset, parent, element)
   leftRange.setStart(parent, 0);
   leftRange.setEnd(node, offset);
   var left = leftRange.extractContents();
+  console.log('left', left);
   element.appendChild(left);//, limit);
   // return para;
   
@@ -89,6 +89,7 @@ TextFormatter.setSecondHalf=function(node, offset, parent, element)
   var left = leftRange.extractContents();
   // leftRange.setEnd(node, offset);
   // var right = leftRange.deleteContents();
+  console.log('right', left);
   element.appendChild(left);//, limit);
   
 }

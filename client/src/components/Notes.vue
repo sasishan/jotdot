@@ -895,7 +895,7 @@ export default
       //                               caretPosition.range.endContainer.nextSibling.nodeName=="BR" && 
       //                               caretPosition.range.endContainer.nextSibling.nextSibling==null );
 
-      var isAtEndingOfSection = (textContent.trim().length == caretPosition.caretOffset);
+      var isAtEndingOfSection = (textContent.length == caretPosition.caretOffset || textContent.trim().length == caretPosition.caretOffset);
       // ( caretPosition.caretOffset==(section.text.length-1) );
       var sectionHasChildren = ( section.sections.length>0) ;
 
@@ -922,6 +922,7 @@ export default
       }
       else if (!isAtEndingOfSection && !isAtBeginningOfSection)
       {
+        console.log('2');
         // console.log(innerHTML);
         // var firstHalfNode = document.createTextNode(textContent);
         // firstHalfNode.innerHTML = innerHTML;
@@ -944,6 +945,7 @@ export default
 
         //take the first half, split it out into its own section above the current one
         //use textcontent because the text cannot be committed without moving the caret position
+        console.log('left innerHTML', scratchPad.innerHTML);
         newSectionInitialValue = scratchPad.innerHTML;
         scratchPad.innerHTML=""; 
 
@@ -952,6 +954,8 @@ export default
         var finalString = textContent.substring(caretPosition.caretOffset, textContent.length);
         // newSectionInitialValue = textContent.substring(0, caretPosition.caretOffset);
         // var finalString = textContent.substring(caretPosition.caretOffset, textContent.length);
+
+        console.log('right innerHTML', scratchPad.innerHTML);
 
         section.html = scratchPad.innerHTML;//secondHalfNode.textContent;
         section.text = scratchPad.textContent;// secondHalfNode.textContent;
