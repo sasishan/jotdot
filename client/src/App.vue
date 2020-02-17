@@ -93,13 +93,9 @@ table, th, td  {
 }
 .main
 {
-  margin-top: 20px;
+  margin-top: 40px;
 }
-.main_container
-{
-  margin: 20px 0 0;  
-  margin-left: auto;
-}
+
 
 </style>
 
