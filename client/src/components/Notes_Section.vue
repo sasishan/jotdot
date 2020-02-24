@@ -23,9 +23,6 @@
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>
-    <!--TipTap 
-      :style="sectionIndent" 
-      :sectionContent="getSectionContent" /-->
     <div 
       :id="getId"
       ref="section_text"         
@@ -42,23 +39,28 @@
       @paste="pasteContent"
       @blur = "blurSection($event, section)"> 
     </div>
-    <draggable v-model="getSections" :disabled="isMobile() || !allowEdit" @end="dragEnd" v-bind="dragOptions()">
-      <Notes_Section v-for="(section, index) in getSections" 
-        :section="section" 
-        :depth="depth+1" 
-        :allowEdit=allowEdit
-        :haveWritePermissions=haveWritePermissions
-        :searchText = 'searchText'
-        :offset="0"
-        v-if="(getOpenState) || allowEdit==false" 
-        @save-section="emitSaveSection"
-        @special-key-pressed="emitKeyPress"
-        @section-in-focus="sectionInFocus"
-        @section-in-blur="sectionBlurred"
-        @special-key-down-pressed="emitKeyDownPress"
-        @backspace-begin-section="emitBackspaceAtBegin"
-        @enter-key-pressed="emitEnterDownPress"
-        />      
+    <draggable @change="dragUpdate({'event': $event, 'section': section, 'listSections': listSections})" :list="listSections" :disabled="isMobile() || !allowEdit"         
+        v-bind="dragOptions()" :group="{ name: 'g1' }">
+      <template v-for="(section, index) in listSections" >
+        <Notes_Section
+          :key="index"
+          :section="section" 
+          :listSections="section.sections"
+          :depth="depth+1" 
+          :allowEdit=allowEdit
+          :haveWritePermissions=haveWritePermissions
+          :searchText = 'searchText'
+          :offset="0"
+          v-if="(getOpenState) || allowEdit==false" 
+          @save-section="emitSaveSection"
+          @special-key-pressed="emitKeyPress"
+          @section-in-focus="sectionInFocus"
+          @section-in-blur="sectionBlurred"
+          @special-key-down-pressed="emitKeyDownPress"
+          @backspace-begin-section="emitBackspaceAtBegin"
+          @enter-key-pressed="emitEnterDownPress"
+          />     
+          </template> 
     </draggable>
     
   </div>
@@ -90,7 +92,9 @@ export default
     depth: 0,
     allowEdit: {}, 
     searchText: {},
-    haveWritePermissions:false
+    haveWritePermissions:false,
+    locked:{},
+    listSections:{}
   },
   components:
   {
@@ -150,6 +154,7 @@ export default
         'text-align': 'left',
         'line-height': this.lineHeight,
         'padding-left': '10px',
+        'padding-right':'50px',
         'border-left': '1px solid #ccc'
       },
       baseBorderStyle: 
@@ -248,7 +253,8 @@ export default
       }
       else
       {
-        content= '<li> ' +this.section.html +'</li>'; 
+        // content= '<li> ' +this.section.html +'</li>'; 
+        content= '- ' +this.section.html; 
       }
 
       // return content;
@@ -271,10 +277,10 @@ export default
       return sanitized;  
     },
 
-    getEditable()
-    {
-      return this.allowEdit;
-    },
+    // getEditable()
+    // {
+    //   return this.allowEdit;
+    // },
     getSectionText()
     {
       if (this.allowEdit)
@@ -296,6 +302,11 @@ export default
     getEditable()
     {
       if (this.haveWritePermissions==false)
+      {
+        return "false";
+      }
+
+      if (this.section && this.section.lock && this.section.lock.isLocked==true)
       {
         return "false";
       }
@@ -367,8 +378,16 @@ export default
       if (this.allowEdit==false)
       {
         this.baseSectionStyle['border-left']= '0px';
-      }      
-
+      } 
+      if (this.section && this.section.lock && this.section.lock.isLocked==true)
+      {     
+        this.baseSectionStyle['background']="yellow";
+      }
+      else
+      {
+        delete this.baseSectionStyle.background;  
+      }
+      
       return this.baseSectionStyle;
     },
     menuIndent()
@@ -429,6 +448,14 @@ export default
 
     //   return true;
     // },
+    add(object)
+    {
+      console.log('add', object);
+    },   
+    log(event)
+    {
+      console.log('log',event);
+    },
     getSanitized(content)
     {
       var c= 
@@ -1335,7 +1362,7 @@ export default
     {
       // console.log('in focus', this.section);;
       this.commitContentsToSection();
-      this.$emit('section-in-focus', event, this.section, this.depth)
+      this.$emit('section-in-focus', event, this.section, this.depth);
     },
     sectionInFocus(event, section, depth) //when a focus signal is received, pass it up the chain
     {
@@ -1378,20 +1405,76 @@ export default
     {
       console.log(this.section.sections);
       return (this.section.sections[event.newIndex]);
-    },      
-    dragEnd(event)
+    },    
+    dragUpdate(dragDetails) 
     {
-      console.log('dragEnd',event);
-      var draggedSection = this.getDraggedSection(event);
-      var parentSection = this.section; 
+      console.log(dragDetails);;
+      var event = dragDetails.event;
+      var s = dragDetails.section;
+      var l = dragDetails.list;
 
+      var draggedSection=null;
+      var parentSection =null;
+      var newIndex=-1;
+      var elementType='';
+      if (event[Common.DragEvent_Added])
+      {
+        console.log('moving without');
+        elementType=Common.DragEvent_Added;
+      }
+      else if (event[Common.DragEvent_Move])
+      {
+        console.log('moving within');
+        elementType = Common.DragEvent_Move
+      }
+      else
+      {
+        return;
+      }
+      draggedSection = event[elementType].element;
+      newIndex = event[elementType].newIndex;
+      parentSection = s;         
+
+      // Common.moveSections(draggedSection, oldParent, newParent, newIndex);
+      draggedSection.parentSection=parentSection.id;
 
       Operations.dragSectionOp(this.$store, 
         draggedSection, 
         parentSection, 
         parentSection, 
-        event.newIndex);
-    },    
+        newIndex);        
+    }, 
+    // dragEnd(dragDetails)
+    // {
+    //   console.log(dragDetails);;
+    //   var event = dragDetails.event;
+    //   var s = dragDetails.section;
+    //   var l = dragDetails.list;
+
+    //   var draggedSection=null;
+    //   var parentSection =null;
+    //   console.log(event.type, this.section, s.id);
+    //   if (event.type=="end")
+    //   {
+    //     if (s.id==this.section)
+    //     {
+    //       console.log('moving within');
+    //       draggedSection = this.getDraggedSection(event);
+    //       parentSection = this.section;           
+    //     }
+    //   }
+    //   else if (event.type=="add")
+    //   {
+    //     draggedSection = this.getDraggedSection(event);
+    //     parentSection = s.id; 
+    //   }
+
+    //   // Operations.dragSectionOp(this.$store, 
+    //   //   draggedSection, 
+    //   //   parentSection, 
+    //   //   parentSection, 
+    //   //   event.newIndex);
+    // },    
     isMobile()
     {
       return Common.isMobile();

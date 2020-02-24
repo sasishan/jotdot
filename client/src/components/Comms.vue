@@ -1,5 +1,7 @@
 <script>
 import { Auth } from 'aws-amplify';
+import io from "socket.io-client";
+
 const axios = require('axios');
 
 function getToken(session)
@@ -65,6 +67,21 @@ async function getFileHeader()
 export default 
 {
 	name: 'Comms',
+	async wsEmit(socket, eventType, data)
+	{
+		// var socket = io.connect(url);
+		// socket.emit('pingServer', {data: 'Ping!'});
+		console.log(eventType);
+		try 
+		{
+			var headers = await getHeader();
+			socket.emit(eventType,  { header: headers, data: data });
+		}
+		catch (err) 
+		{
+			console.log('An error occurred: ', err);
+		}		
+	},
 	async anonymousPost(url, data, callback)
 	{
 		try 

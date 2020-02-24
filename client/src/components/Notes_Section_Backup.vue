@@ -23,9 +23,6 @@
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
     </span>
-    <!--TipTap 
-      :style="sectionIndent" 
-      :sectionContent="getSectionContent" /-->
     <div 
       :id="getId"
       ref="section_text"         
@@ -42,24 +39,31 @@
       @paste="pasteContent"
       @blur = "blurSection($event, section)"> 
     </div>
-   <draggable v-model="getSections" :disabled="isMobile() || !allowEdit" @end="dragEnd" v-bind="dragOptions()">
-    <Notes_Section v-for="(section, index) in getSections" 
-      :section="section" 
-      :depth="depth+1" 
-      :allowEdit=allowEdit
-      :haveWritePermissions=haveWritePermissions
-      :searchText = 'searchText'
-      :offset="0"
-      v-if="(getOpenState) || allowEdit==false" 
-      @save-section="emitSaveSection"
-      @special-key-pressed="emitKeyPress"
-      @section-in-focus="sectionInFocus"
-      @section-in-blur="sectionBlurred"
-      @special-key-down-pressed="emitKeyDownPress"
-      @backspace-begin-section="emitBackspaceAtBegin"
-      @enter-key-pressed="emitEnterDownPress"
-      />     
-      </draggable>
+    <draggable @add="dragEnd({'event': $event, 'section': section, 'listSections': listSections})" :list="listSections" :disabled="isMobile() || !allowEdit" 
+        @end="dragEnd({'event': $event, 'section': section, 'listSections': listSections})" 
+        v-bind="dragOptions()" :group="{ name: 'g1' }">
+      <template v-for="(section, index) in listSections" >
+        <Notes_Section
+          :key="index"
+          :section="section" 
+          :listSections="section.sections"
+          :depth="depth+1" 
+          :allowEdit=allowEdit
+          :haveWritePermissions=haveWritePermissions
+          :searchText = 'searchText'
+          :offset="0"
+          v-if="(getOpenState) || allowEdit==false" 
+          @save-section="emitSaveSection"
+          @special-key-pressed="emitKeyPress"
+          @section-in-focus="sectionInFocus"
+          @section-in-blur="sectionBlurred"
+          @special-key-down-pressed="emitKeyDownPress"
+          @backspace-begin-section="emitBackspaceAtBegin"
+          @enter-key-pressed="emitEnterDownPress"
+          />     
+          </template> 
+    </draggable>
+    
   </div>
 </template>
 
@@ -89,7 +93,9 @@ export default
     depth: 0,
     allowEdit: {}, 
     searchText: {},
-    haveWritePermissions:false
+    haveWritePermissions:false,
+    locked:{},
+    listSections:{}
   },
   components:
   {
@@ -149,6 +155,7 @@ export default
         'text-align': 'left',
         'line-height': this.lineHeight,
         'padding-left': '10px',
+        'padding-right':'50px',
         'border-left': '1px solid #ccc'
       },
       baseBorderStyle: 
@@ -202,10 +209,12 @@ export default
   },
   computed: 
   {
+    showSeparator()
+    {
+      return (!this.allowEdit && this.getSections.length>0);
+    },
     showSectionMenu()
     {
-      // console.log(this.$store.getters.getCurrentOpenSectionMenuId, this.section.id);
-
       if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
       {
         return true;
@@ -223,6 +232,7 @@ export default
     getSectionContent()
     {
       var content="";
+
       if (this.allowEdit)
       {
         if (this.inSearchMode() && this.section.searchHtml)
@@ -244,30 +254,20 @@ export default
       }
       else
       {
-        content= '-  ' +this.section.html; 
+        // content= '<li> ' +this.section.html +'</li>'; 
+        content= '- ' +this.section.html; 
       }
 
       // return content;
       // console.log(sanitized)
       // return this.runSanitizer(content);
       // return content;
+// [ 'h3', 'h4', 'h5', 'h6', 'blockquote', 'p', 'a', 'ul', 'ol',
+//   'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
+//   'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe' ],
 
-
-      content = 
-        this.$sanitize(content, 
-        {
-          allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
-          allowedAttributes:
-          {
-            'span': ['contenteditable'], 
-            'a':['href']
-          },
-          // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
-          allowedClasses:{
-            'span': [ 'hashTagText' ], 
-            'strong': ['highlightText']
-          },
-        });         
+      var sanitized = this.getSanitized(content);
+              
         // this.$sanitize(content, 
         // {
         //   allowedTags: this.$sanitize.defaults.allowedTags.concat([ 'img', 'span', 'table']),
@@ -275,12 +275,13 @@ export default
         //     'span': [ 'hashTagText' ]
         //   },
         // });    
-        return content;  
+      return sanitized;  
     },
-    getEditable()
-    {
-      return this.allowEdit;
-    },
+
+    // getEditable()
+    // {
+    //   return this.allowEdit;
+    // },
     getSectionText()
     {
       if (this.allowEdit)
@@ -302,6 +303,11 @@ export default
     getEditable()
     {
       if (this.haveWritePermissions==false)
+      {
+        return "false";
+      }
+
+      if (this.section && this.section.lock && this.section.lock.isLocked==true)
       {
         return "false";
       }
@@ -373,8 +379,16 @@ export default
       if (this.allowEdit==false)
       {
         this.baseSectionStyle['border-left']= '0px';
-      }      
-
+      } 
+      if (this.section && this.section.lock && this.section.lock.isLocked==true)
+      {     
+        this.baseSectionStyle['background']="yellow";
+      }
+      else
+      {
+        delete this.baseSectionStyle.background;  
+      }
+      
       return this.baseSectionStyle;
     },
     menuIndent()
@@ -435,6 +449,54 @@ export default
 
     //   return true;
     // },
+    add(object)
+    {
+      console.log('add', object);
+    },   
+    log(event)
+    {
+      console.log('log',event);
+    },
+    getSanitized(content)
+    {
+      var c= 
+      this.$sanitize(content, 
+        {
+          transformTags: {
+            'p': 'br',
+            'li': 'br',
+            'h1':'b',
+            'h1':'b',
+            'h2':'b',
+            'h3':'b',
+            'h4':'b',
+            'h5':'b',
+            'h6':'b',
+            'div':'span',
+          },
+          allowedTags: 
+            [ 
+              'h3', 'h4', 'h5', 'h6', 'blockquote', 
+              'p', 
+              'a',
+              'nl', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 
+              'div',
+              'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe', 'span', 'table', 'a' ],          
+          // this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
+          allowedAttributes:
+          {
+            'span': ['contenteditable'], 
+            'a':['href']
+          },
+          // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
+          allowedClasses:{
+            'span': [ 'hashTagText' ], 
+            'strong': ['highlightText']
+          },
+        });  
+
+        return c; 
+    },    
     clickShowSectionMenu(event)
     {
       if (this.$store.getters.getCurrentOpenSectionMenuId==this.section.id)
@@ -464,12 +526,13 @@ export default
     pasteContent(event)
     {
       // console.log(event);
-      // event.preventDefault();
-      // document.execCommand('inserttext', false, event.clipboardData.getData('text/plain'));
+      event.preventDefault();
+      var content = this.getSanitized(event.clipboardData.getData('text/html'));
+      document.execCommand('insertHTML', false, content);
       // console.log('pasted: '+ event.clipboardData.getData('text/plain'));
     },  
     inputText(event)
-    { 
+    {       
       Operations.addPlaceHolderNoOp(this.$store);  //NoOp to stop reload till queue is processed
       this.addUndo(event);
     },
@@ -756,7 +819,7 @@ export default
       var tagElements = this.$refs.section_text.getElementsByClassName(Common.HashTagTextClass);
       for (var i=0; i< tagElements.length; i++)
       {
-        tags.push(tagElements[i].innerText);
+        tags.push(tagElements[i].innerText.toLowerCase());
       }
       // var result = str.match(/<b>(.*?)<\/b>/g).map(function(val){
       //   return val.replace(/<\/?b>/g,'');
@@ -803,7 +866,7 @@ export default
       var hashTag = document.createElement("span");
       var tagId = "tag_"+this.getNewTagId();
       hashTag.id = tagId;
-      hashTag.textContent=text;
+      hashTag.textContent=text.toLowerCase();
       hashTag.className =Common.HashTagTextClass;
 
       return hashTag;
@@ -1085,7 +1148,7 @@ export default
           // TextFormatter.deleteText(curPosition, ((this.tagText.length)*-1) ); 
           var tagText = lastHashtag.tag;
           TextFormatter.deleteText(curPosition, (tagText.length)*-1 ); 
-          var tagElement = TextFormatter.insertElementAt(curPosition, 'span', tagText, Common.HashTagTextClass); 
+          var tagElement = TextFormatter.insertElementAt(curPosition, 'span', tagText.toLowerCase(), Common.HashTagTextClass); 
           tagElement.contentEditable = 'false';
 
           this.setTagClick();
@@ -1234,6 +1297,7 @@ export default
       {
         this.section.text = this.$refs.section_text.innerText;
         this.section.html = this.$refs.section_text.innerHTML;           
+        this.checkAndQueueDeltaChange(this);
       }
     },
     keyUpMonitor(event) 
@@ -1243,19 +1307,7 @@ export default
 
       //shift-enter would be to add a line break to the content. We only want to catch Enter 
       //to add a new section
-      if (event.key==Common.Key_Up)
-      {
-        // this.emitKeyDownPress(event, Common.KeyEventTypes.Up, this.section);
-        // event.stopPropagation(); 
-        // event.preventDefault();        
-      }
-      else if (event.key==Common.Key_Down)
-      {
-        // this.emitKeyDownPress(event, Common.KeyEventTypes.Down, this.section);  
-        // event.stopPropagation(); 
-        // event.preventDefault();        
-      } 
-      else if (event.key=="Enter" && !this.shiftPressed)
+      if (event.key=="Enter" && !this.shiftPressed)
       {
         console.log('keyup enter');
         // event.stopPropagation(); 
@@ -1272,8 +1324,11 @@ export default
       }
       else
       {
+        this.getSelectedText(event);
         this.$emit('content-key-pressed', event)
       }
+
+
 
     }, 
     blurSection(event, section) //when the section is blurred, emit an event and save the changes
@@ -1308,7 +1363,7 @@ export default
     {
       // console.log('in focus', this.section);;
       this.commitContentsToSection();
-      this.$emit('section-in-focus', event, this.section, this.depth)
+      this.$emit('section-in-focus', event, this.section, this.depth);
     },
     sectionInFocus(event, section, depth) //when a focus signal is received, pass it up the chain
     {
@@ -1349,19 +1404,39 @@ export default
     },
     getDraggedSection(event)
     {
+      console.log(this.section.sections);
       return (this.section.sections[event.newIndex]);
     },      
-    dragEnd(event)
+    dragEnd(dragDetails)
     {
-      var draggedSection = this.getDraggedSection(event);
-      var parentSection = this.section; 
+      console.log(dragDetails);;
+      var event = dragDetails.event;
+      var s = dragDetails.section;
+      var l = dragDetails.list;
 
+      var draggedSection=null;
+      var parentSection =null;
+      console.log(this.section, s.id);
+      if (event.type=="end")
+      {
+        if (s.id==this.section)
+        {
+          console.log('moving within');
+          draggedSection = this.getDraggedSection(event);
+          parentSection = this.section;           
+        }
+      }
+      else if (event.type=="add")
+      {
+        draggedSection = this.getDraggedSection(event);
+        parentSection = s.id; 
+      }
 
-      Operations.dragSectionOp(this.$store, 
-        draggedSection, 
-        parentSection, 
-        parentSection, 
-        event.newIndex);
+      // Operations.dragSectionOp(this.$store, 
+      //   draggedSection, 
+      //   parentSection, 
+      //   parentSection, 
+      //   event.newIndex);
     },    
     isMobile()
     {

@@ -247,6 +247,7 @@ exports.Operation_moveSection = function(db, eId, data, callback)
 									newParentSection, 
 									moveDirection);
 
+				console.log('moveQuery', query);
 				if (query==null)
 				{
 					return callback(null, {});	
@@ -594,6 +595,7 @@ getUpdateQuery = function(data)
 	var textValue = Helpers.getField(data, OpsConfig.SectionFields.Text, []);
 	var htmlValue = Helpers.getField(data, OpsConfig.SectionFields.HTML, []);
 	var tags = 		Helpers.getField(data, OpsConfig.SectionFields.Tags, []);
+	var lock = 		Helpers.getField(data, OpsConfig.SectionFields.lock, []);
 
 	if (!openValue.isValid() && !textValue.isValid())
 	{
@@ -615,6 +617,10 @@ getUpdateQuery = function(data)
 		setStatement[OpsConfig.SectionFields.Text]= textValue.getValue();
 		setStatement[OpsConfig.SectionFields.HTML]= htmlValue.getValue();
 	}
+	if (lock.isValid())
+	{
+		setStatement[OpsConfig.SectionFields.Lock]= lock.getValue();
+	}	
 
 	return setStatement;
 }
@@ -755,12 +761,19 @@ getMoveQuery = function(documentId, oldPosition, oldParentSectionId, newPosition
 	}
 	else
 	{
+		// findQueryIncrement = 
+		// { 
+		// 	[OpsConfig.SectionFields.DocumentId]: documentId.getValue(), 
+		// 	[OpsConfig.SectionFields.ParentSection]: newParentSection.getValue()
+		// };	
+		// increment = { '$inc':{ [OpsConfig.SectionFields.Position]: 0 }};
 		findQueryIncrement = 
 		{ 
 			[OpsConfig.SectionFields.DocumentId]: documentId.getValue(), 
-			[OpsConfig.SectionFields.ParentSection]: newParentSection.getValue()
-		};	
-		increment = { '$inc':{ [OpsConfig.SectionFields.Position]: 0 }};		
+			[OpsConfig.SectionFields.ParentSection]: newParentSection.getValue(),
+			[OpsConfig.SectionFields.Position]: { $gte: newPosition.getValue() }
+		};				
+		increment = { '$inc':{ [OpsConfig.SectionFields.Position]: 1 }};				
 	}
 
 	return { 

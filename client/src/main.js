@@ -12,6 +12,8 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { library } from '@fortawesome/fontawesome-svg-core'
 import Notes_Section from './components/Notes_Section.vue';
 import sanitizeHTML from 'sanitize-html';
+import io from 'socket.io-client';
+import VueSocketIO from 'vue-socket.io';
 
 // import moment from 'moment';
 import {faSquare, faArrowCircleRight, faCircle, faAngleUp, faCog, faHashtag, faBars,
@@ -46,7 +48,6 @@ const awsconfig = {
 
 Amplify.configure( awsconfig );
 const currentConfig = Auth.configure(); 
-console.log('configured');
 
 import routes from './Routes.vue'
 import AuthHelper from './AuthHelper.vue'
@@ -92,6 +93,17 @@ Vue.use(require('vue-moment'));
 Vue.config.productionTip = false
 Vue.prototype.$http = Axios;
 // Vue.prototype.moment = moment;
+
+Vue.use(new VueSocketIO({
+    debug: true,
+    connection: 'http://localhost:3020', //options object is Optional
+    vuex: {
+      store,
+      actionPrefix: "SOCKET_",
+      mutationPrefix: "SOCKET_"
+    }
+  })
+);
 
 const token = localStorage.getItem('token')
 if (token) 

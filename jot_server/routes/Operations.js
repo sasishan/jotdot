@@ -22,7 +22,7 @@ exports.receiveOperations = function(req, res)
 			{
 				return Helpers.sendErrorResponse(res, error);
 			}
-			console.log('Operations-processing: ', operation);
+			// console.log('Operations-processing: ', operation);
 			processOneOperation(req, operation, function(error, operationResult)
 			{
 				if (error)

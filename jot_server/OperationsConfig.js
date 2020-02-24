@@ -44,7 +44,8 @@ OpsConfig.SectionFields=
     Sections: 'sections',
     Open: 'open',
     Tags: 'tags',
-    PriorId : 'priorId'
+    PriorId : 'priorId',
+    Lock : 'lock',
 };
 
 OpsConfig.UpdateOperation=
@@ -65,6 +66,7 @@ OpsConfig.IdFields=
 
 OpsConfig.MOVE_UPSTREAM = 1;
 OpsConfig.MOVE_DOWNSTREAM = -1;
+OpsConfig.CROSS_STREAM = 2;
 OpsConfig.APPEND = 0;
 
 OpsConfig.APIPath_JotId = "jotId";

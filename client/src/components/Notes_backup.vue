@@ -21,31 +21,32 @@
       <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
       <h4 ref="titleSection" v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=false v-html="currentMainSection.text" class="mt-2" @blur="titleChanged(currentMainSection)"></h4>      
     </transition>
-    <draggable @change="dragUpdate({'event': $event, 'section': currentMainSection, 'listSections': currentMainSection.sections})" :list="currentMainSection.sections" :disabled="isMobile() || !allowEdit"         
-        v-bind="dragOptions()" :group="{ name: 'g1' }">    
-      <template v-for="(section, index) in currentMainSection.sections">
-        <Notes_Section 
-          :key="index" 
-          :allowEdit=allowEdit
-          :listSections=section.sections
-          :locked="section.locked==true ? true : false"
-          :haveWritePermissions=haveDocWritePermissions
-          :section="section" 
-          :depth="0" 
-          :searchText='searchText'
-          :offset="0"
-          v-if="isLoaded==true" 
-          class="list-item"
-          @section-in-focus="sectionInFocus"
-          @section-in-blur="sectionBlurred"
-          @section-selected="sectionSelected"
-          @special-key-pressed="keyMonitor" 
-          @special-key-down-pressed="keyDownMonitor"
-          @save-section="saveSections"
-          @backspace-begin-section="backspaceAtBegin"
-          @enter-key-pressed="processEnterKey"
-          />
-        </template>
+    <draggable v-model="currentMainSection.sections" @end="dragEnd" :disabled="isMobile() || !allowEdit" v-bind="dragOptions()" >
+      <transition-group name="list" tag="p" mode="out-in">
+        <template v-for="(section, index) in currentMainSection.sections">
+          <Notes_Section 
+            :key="index" 
+            :allowEdit=allowEdit
+            :listSections=currentMainSection.sections
+            :locked="section.locked==true ? true : false"
+            :haveWritePermissions=haveDocWritePermissions
+            :section="section" 
+            :depth="0" 
+            :searchText='searchText'
+            :offset="0"
+            v-if="isLoaded==true" 
+            class="list-item"
+            @section-in-focus="sectionInFocus"
+            @section-in-blur="sectionBlurred"
+            @section-selected="sectionSelected"
+            @special-key-pressed="keyMonitor" 
+            @special-key-down-pressed="keyDownMonitor"
+            @save-section="saveSections"
+            @backspace-begin-section="backspaceAtBegin"
+            @enter-key-pressed="processEnterKey"
+            />
+          </template>
+      </transition-group>
     </draggable>
     <br>
     <Notes_Add style="float:left" @add-section-click="addNewSection" v-if="haveDocWritePermissions && allowEdit && isLoaded==true" /> 
@@ -809,59 +810,21 @@ export default
     {
       return (this.currentMainSection.sections[event.newIndex]);
     },  
-    dragUpdate(dragDetails) 
+    dragEnd(event)
     {
-      console.log(dragDetails);;
-      var event = dragDetails.event;
-      var s = dragDetails.section;
-      var l = dragDetails.list;
+      console.log('dragEnd',event);
+      var draggedSection = this.getDraggedSection(event);
+      var parentSection = this.getSectionById([this.currentMainSection], draggedSection.parentSection, false); 
 
-      var draggedSection=null;
-      var parentSection =null;
-      var newIndex=-1;
-      var elementType='';
-      if (event[Common.DragEvent_Added])
-      {
-        console.log('moving without');
-        elementType=Common.DragEvent_Added;
-      }
-      else if (event[Common.DragEvent_Move])
-      {
-        console.log('moving within');
-        elementType = Common.DragEvent_Move
-      }
-      else
-      {
-        return;
-      }
-      draggedSection = event[elementType].element;
-      newIndex = event[elementType].newIndex;
-      parentSection = s;         
-
-      // Common.moveSections(draggedSection, oldParent, newParent, newIndex);
-      draggedSection.parentSection=parentSection.id;
-
+      // console.log('dragged', draggedSection, parentSection);
       Operations.dragSectionOp(this.$store, 
         draggedSection, 
         parentSection, 
         parentSection, 
-        newIndex); 
-    },     
-    // dragEnd(event)
-    // {
-    //   console.log('dragEnd',event);
-    //   var draggedSection = this.getDraggedSection(event);
-    //   var parentSection = this.getSectionById([this.currentMainSection], draggedSection.parentSection, false); 
+        event.newIndex);
 
-    //   // console.log('dragged', draggedSection, parentSection);
-    //   Operations.dragSectionOp(this.$store, 
-    //     draggedSection, 
-    //     parentSection, 
-    //     parentSection, 
-    //     event.newIndex);
-
-    //   // console.log('finish drag', draggedSection, parentSection, this.currentMainSection, this.currentSelection);
-    // },
+      // console.log('finish drag', draggedSection, parentSection, this.currentMainSection, this.currentSelection);
+    },
     ////////////////////////////////
     // Save
     ////////////////////////////////    

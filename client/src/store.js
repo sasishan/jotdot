@@ -123,35 +123,42 @@ export const store = new Vuex.Store({
 	    {
 	    	return state.currentOpenSectionMenuId;
 	    }        
-
 	},
 	actions:
 	{
-	    async saveOperations(state)
-	    {
-	      var queue = state.getters.getOpsQueue;
-	      var sendDoc=false;
-	      var url = Common.URLS.Operations;
-	      var result=null;
-	      var opErrors=[];
+		//WebSocket EVENTS
+		// SOCKET_SectionInFocus(state, data)
+		// {
+		// 	console.log(state, data);
+		// },
+		///////////////////
+	    // async saveOperations(state)
+	    // {
+	    //   var queue = state.getters.getOpsQueue;
+	    //   var sendDoc=false;
+	    //   var url = Common.URLS.Operations;
+	    //   var result=null;
+	    //   var opErrors=[];
 	      
-	      while (queue.length>0)
-	      {
-	        var op = queue.pop();
+	    //   while (queue.length>0)
+	    //   {
+	    //     var op = queue.pop();
 	        
-	        if (OpsConfig.IgnoreOp(op)==false)
-	        {
-	        	console.log('sending op', op);
-	        	result = await Comms.post(url, op);
-	        	if (result==null)
-	        	{
-	        		console.log('There was an error applying OP ', op);
-	        		opErrors.push(op);
-	        	}
-	        }
-	      }
-	      return opErrors;
-	    },	
+	    //     if (OpsConfig.IgnoreOp(op)==false)
+	    //     {
+	    //     	console.log('sending op', op);
+	    //     	result = await Comms.post(url, op);
+	    //     	if (result==null)
+	    //     	{
+	    //     		console.log('There was an error applying OP ', op);
+	    //     		opErrors.push(op);
+	    //     	}
+
+	    //     	Comms.wsEmit(this.$socket, Common.WSTypes.Operation, op);  
+	    //     }
+	    //   }
+	    //   return opErrors;
+	    // },	
 	   //  async loadJots(state, payload)
 	   //  {
 		  // var url = Common.URLS.Documents;
@@ -302,35 +309,35 @@ export const store = new Vuex.Store({
 		{
 			state.currentSelection = section;
 		},		
-		dragSections(state, payload)
-		{
-			var sections = payload.sections;
-			var oldIndex = payload.oldIndex;
-			var newIndex = payload.newIndex;
+		// dragSections(state, payload)
+		// {
+		// 	var sections = payload.sections;
+		// 	var oldIndex = payload.oldIndex;
+		// 	var newIndex = payload.newIndex;
 
-			if (newIndex==0)
-			{
-				sections[newIndex].priorId = sections[newIndex].parentSection;	
-			}
-			else if (newIndex>0)
-			{
-				sections[newIndex].priorId = sections[newIndex-1].id;
-			}
+		// 	if (newIndex==0)
+		// 	{
+		// 		sections[newIndex].priorId = sections[newIndex].parentSection;	
+		// 	}
+		// 	else if (newIndex>0)
+		// 	{
+		// 		sections[newIndex].priorId = sections[newIndex-1].id;
+		// 	}
 
-			if (oldIndex==0)
-			{
-				sections[oldIndex].priorId = sections[oldIndex].parentSection;	
-			}
-			else if (oldIndex>0)
-			{
-				sections[oldIndex].priorId = sections[oldIndex-1].id;
-			}	
+		// 	if (oldIndex==0)
+		// 	{
+		// 		sections[oldIndex].priorId = sections[oldIndex].parentSection;	
+		// 	}
+		// 	else if (oldIndex>0)
+		// 	{
+		// 		sections[oldIndex].priorId = sections[oldIndex-1].id;
+		// 	}	
 
-			if (newIndex+1!=oldIndex && newIndex<sections.length)
-			{
-				sections[oldIndex+1].priorId = sections[oldIndex].id;				
-			}		
-		},
+		// 	if (newIndex+1!=oldIndex && newIndex<sections.length)
+		// 	{
+		// 		sections[oldIndex+1].priorId = sections[oldIndex].id;				
+		// 	}		
+		// },
 		initializeJots(state, payload)
 		{
 			state.jotsList=[];

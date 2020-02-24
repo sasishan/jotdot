@@ -22,7 +22,7 @@ OpsConfig.ValidOperationsTypes =
     UpdateSection:'UpdateSection',
     MoveSection: 'MoveSection',
     UpdateJot: 'UpdateJot',
-    NoOp: 'NoOp'
+    NoOp: 'NoOp',
 };
 
 OpsConfig.IgnoreOp = function(op)

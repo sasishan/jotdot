@@ -71,6 +71,8 @@ export default
   },  
   async mounted()
   {
+    Comms.wsEmit(this.$socket, Common.WSTypes.Connect, { }); 
+    // Comms.wsEmit(this.$socket, Common.WSTypes.NoJot, { });    
     this.$store.commit('clearStoredData');
     var response = await this.loadJots();
     if (response.error)

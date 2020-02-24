@@ -107,8 +107,8 @@ hr {
     padding-bottom: 4px;
     border: 1px solid #1976d2;
     z-index: 1000;
-    right: 0;
-    left: auto;    
+    right: auto;
+    left: 0;    
 }
 
 

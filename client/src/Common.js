@@ -2,6 +2,7 @@ var Common={};
 
 
 var urlBase = 'http://localhost:3020';
+// var urlBase = 'https://jotdotserver.honchohq.com';
 
 Common.AppName = "JotDot";
 
@@ -77,12 +78,23 @@ Common.URLS =
    DeleteJot: urlBase+"/api/v1/jots/delete/",
    GetTags: urlBase+"/api/v1/tags/",
    GetTagSections: urlBase+"/api/v1/tags/sections",
+   WSServerURL: urlBase
 }
 
 Common.OperationTypes = 
 {
     AddSection:'addSection',
     MoveSection:'addExistingSection',
+}
+
+Common.WSTypes = 
+{
+  Ping: 'ping',  
+  Connect: 'handshake',  
+  SetActiveJot:'activeJot',
+  Operation: 'operation',
+  SectionInFocus: 'sectionFocus',
+  SectionLostFocus: 'sectionBlur'
 }
 
 Common.KeyEventTypes=
@@ -93,6 +105,8 @@ Common.KeyEventTypes=
     Down: 'key-down'
 }
 
+Common.DragEvent_Added='added';
+Common.DragEvent_Move='moved';
 
 Common.GoToSection = function(documentId, sectionId, router)
 {
@@ -123,6 +137,7 @@ Common.Copy= function(from, to)
 
 Common.DragOptions = 
 {
+  animation: 200,
   dragClass: 'dragClass',
   ghostClass: 'ghostClass'
 };

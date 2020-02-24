@@ -9,7 +9,8 @@
     "cookie-parser": "^1.4.4",
     "express": "^4.17.1",
     "http": "^0.0.0",
-    "monk": "^7.1.1"
+    "monk": "^7.1.1",
+    "socket.io": "^2.3.0"
   },
   "devDependencies": {},
   "scripts": {

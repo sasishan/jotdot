@@ -64,7 +64,7 @@ export default
 	      	{
 	      		type: OpsConfig.ValidClientOperations.MoveSection,   
 	      		section: sectionToMove, 
-				parentSection: fromParent, 
+				parentSection: newParent, 
 				position: newIndex
 			};
 		this.queueOperation(store, operation);
@@ -202,9 +202,10 @@ export default
 			console.log(e);
 		}
     },    
-    async saveOperations(store, callback)
+    async saveOperations(store, socket, callback)
     {
-    	var errors = await store.dispatch('saveOperations');
+    	var errors = await this.sendOperations(store, socket);
+    	//store.dispatch('saveOperations');
     	if (errors.length>0)
 		{
 			// console.log('Errors saving: ', errors);
@@ -212,6 +213,33 @@ export default
 		}
 		return callback(null, 'success');
     },
+    async sendOperations(store, socket)
+    {
+      var queue = store.getters.getOpsQueue;
+      var sendDoc=false;
+      var url = Common.URLS.Operations;
+      var result=null;
+      var opErrors=[];
+      
+      while (queue.length>0)
+      {
+        var op = queue.pop();
+        
+        if (OpsConfig.IgnoreOp(op)==false)
+        {
+        	console.log('sending op', op);
+        	result = await Comms.post(url, op);
+        	if (result==null)
+        	{
+        		console.log('There was an error applying OP ', op);
+        		opErrors.push(op);
+        	}
+
+        	Comms.wsEmit(socket, Common.WSTypes.Operation, op);  
+        }
+      }
+      return opErrors;
+    },	    
     addExistingSection(existingSection, toNewParentSection, toIndex=Common.APPEND_SECTION)
     {
       var priorId=undefined;

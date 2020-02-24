@@ -3,7 +3,7 @@
     <NavMenu v-if="isSignedIn" />
     <br>
     <b-container class="main_container">
-      <div class="col-lg-11 main ml-5 mr-5 mb-5">      
+      <div class="col-lg-12 main mb-5">      
         <router-view :key="$route.fullPath"></router-view>
       </div>
     </b-container>

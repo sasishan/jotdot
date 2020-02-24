@@ -112,6 +112,13 @@ Objects.Permissions = function()
   };
 };
 
+Objects.WSConnection = function(socketId, eId, user)
+{
+  this.socketId = socketId;
+  this.eId = eId;
+  this.user = user;
+};
+
 Objects.Document = function(eId, orgId, title)
 {
   this.documentId = new ObjectId().toHexString();
@@ -134,6 +141,11 @@ Objects.Section = function(eId, orgId, documentId, parent, position, text, prior
   this.priorId = priorId;
   this.eId = eId;
   this.orgId = orgId;
+  this.lock = 
+    {
+      isLocked: false,
+      lockedBy: ""
+    }
 
   this.text = text;
   this.html = text;
