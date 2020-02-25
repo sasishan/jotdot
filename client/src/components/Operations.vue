@@ -89,7 +89,6 @@ export default
         		position=newIndex;
         		this.addExistingSection(sectionToMove, newParent, newIndex);		
         	}
-        	console.log('moveSectionOps', sectionToMove);
 			var operation = 
 				{
 					type: OpsConfig.ValidClientOperations.MoveSection,   

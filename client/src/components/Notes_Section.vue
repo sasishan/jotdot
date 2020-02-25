@@ -1,5 +1,5 @@
 <template>
-  <div >
+  <div>
     <span :style="getSectionsLength>0 ? formatIndent : formatNoUpIndent" v-if="showFormatMenu && allowEdit==true" >
       <Notes_Formatter 
         @format-text="formatText"         
@@ -61,8 +61,7 @@
           @enter-key-pressed="emitEnterDownPress"
           />     
           </template> 
-    </draggable>
-    
+    </draggable>  
   </div>
 </template>
 

@@ -1,4 +1,5 @@
 <template>
+<div>
   <b-navbar toggleable="xl" type="light" variant="light" fixed="top">
     <b-navbar-brand href="#">
     <font-awesome-icon size="sm" icon="arrow-circle-right" :style="{ color: 'grey' }"  />
@@ -27,6 +28,7 @@
       </b-navbar-nav>
     </b-collapse>
   </b-navbar>	
+</div>
 </template>
 
 <script>
@@ -46,6 +48,10 @@ export default {
 	},
 	methods:
 	{
+	    isMobile() 
+	    {
+	      return Common.isMobile();
+	    },  		
 		getAppName()
 		{
 			return Common.AppName;

@@ -18,11 +18,8 @@
       <span class="float-right permissions-text">{{getJotPermissions(jot)}}</span>
         {{jot.title}}         
       </h5>
-
       <span class="subtitle">{{jot.eId}}</span>
-      
       <span class="float-right lastUpdated-subtitle">
-
         {{ jot.lastUpdated | moment("calendar") }}
       </span>
       <hr>

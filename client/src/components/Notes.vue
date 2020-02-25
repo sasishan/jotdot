@@ -1,72 +1,90 @@
 <template>
-  <span class="main_container">  
-  <span v-if="errorOccurred===true">
-    <h6 class="text-danger mt-5">{{error}}</h6>
-  </span>
-  <span v-if="isLoaded===false && errorOccurred===false">
-    {{loadingMessage}} <font-awesome-icon size="lg" icon="spinner" class="fa-spin" />
-  </span>
-  <span v-if="isLoaded===true">
-    <div class="float-right">
-      <JotsMenu 
-        @toggle-tags="toggleTags()"
-        @toggle-print="togglePrint()"
-        @delete-jot="showDeleteJotConfirm()"/>     
-    </div>  
-  </span>  
-  <span v-if="isLoaded===true && showTags==false"> 
-    <Notes_Breadcrumb :sectionsStack="breadCrumbs" :jot="getJot" :allowEdit=allowEdit class="mt-3"/>
-    <transition name="slide-fade" mode="out-in" >
-      <h4 v-if="isSwitched==true" :contenteditable=false v-html="currentMainSection.text" class="mt-2"></h4>
-      <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
-      <h4 ref="titleSection" v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=false v-html="currentMainSection.text" class="mt-2" @blur="titleChanged(currentMainSection)"></h4>      
-    </transition>
-    <draggable @change="dragUpdate({'event': $event, 'section': currentMainSection, 'listSections': currentMainSection.sections})" :list="currentMainSection.sections" :disabled="isMobile() || !allowEdit"         
-        v-bind="dragOptions()" :group="{ name: 'g1' }">    
-      <template v-for="(section, index) in currentMainSection.sections">
-        <Notes_Section 
-          :key="index" 
-          :allowEdit=allowEdit
-          :listSections=section.sections
-          :locked="section.locked==true ? true : false"
-          :haveWritePermissions=haveDocWritePermissions
-          :section="section" 
-          :depth="0" 
-          :searchText='searchText'
-          :offset="0"
-          v-if="isLoaded==true" 
-          class="list-item"
-          @section-in-focus="sectionInFocus"
-          @section-in-blur="sectionBlurred"
-          @section-selected="sectionSelected"
-          @special-key-pressed="keyMonitor" 
-          @special-key-down-pressed="keyDownMonitor"
-          @save-section="saveSections"
-          @backspace-begin-section="backspaceAtBegin"
-          @enter-key-pressed="processEnterKey"
-          />
-        </template>
-    </draggable>
-    <br>
-    <Notes_Add style="float:left" @add-section-click="addNewSection" v-if="haveDocWritePermissions && allowEdit && isLoaded==true" /> 
-    <div ref="scratchPad" id="scratchPad" style="visibility: hidden"></div> 
-  </span>
-  <span v-if="showTags==true">
-    <Notes_Tags />
-  </span>
-  <div>
-    <b-modal id="confirmDelete" 
-      title="Delete Jot" 
-      @show="resetConfirmDeleteText" 
-      @ok="handleConfirmDeleteJot" 
-      @close= "handleCancelDeleteJot"
-      @cancel= "handleCancelDeleteJot"
-      okTitle="Confirm" buttonSize='sm'
-      no-stacking>
-      <span v-html="getConfirmDeleteModalText()"></span>
-      <b-form-input v-model="confirmDeleteText"></b-form-input>      
-    </b-modal>
-  </div>  
+  <span>  
+    <span v-if="errorOccurred===true">
+      <h6 class="text-danger mt-5">{{error}}</h6>
+    </span>
+    <span v-if="isLoaded===false && errorOccurred===false">
+      {{loadingMessage}} <font-awesome-icon size="lg" icon="spinner" class="fa-spin" />
+    </span>
+    <span v-if="isLoaded===true">
+      <div class="float-right">
+        <JotsMenu 
+          @toggle-tags="toggleTags()"
+          @toggle-print="togglePrint()"
+          @delete-jot="showDeleteJotConfirm()"/>     
+      </div>  
+    </span>  
+    <span v-if="isLoaded===true && showTags==false"> 
+      <Notes_Breadcrumb :sectionsStack="breadCrumbs" :jot="getJot" :allowEdit=allowEdit class="mt-3"/>
+      <transition name="slide-fade" mode="out-in" >
+        <h4 v-if="isSwitched==true" :contenteditable=false v-html="currentMainSection.text" class="mt-2"></h4>
+        <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
+        <h4 ref="titleSection" v-if="isSwitched==false && currentMainSection.sectionId!='-1'" :contenteditable=false v-html="currentMainSection.text" class="mt-2" @blur="titleChanged(currentMainSection)"></h4>      
+      </transition>
+      <draggable @change="dragUpdate({'event': $event, 'section': currentMainSection, 'listSections': currentMainSection.sections})" :list="currentMainSection.sections" :disabled="isMobile() || !allowEdit"         
+          v-bind="dragOptions()" :group="{ name: 'g1' }">    
+        <template v-for="(section, index) in currentMainSection.sections">
+          <Notes_Section 
+            :key="index" 
+            :allowEdit=allowEdit
+            :listSections=section.sections
+            :locked="section.locked==true ? true : false"
+            :haveWritePermissions=haveDocWritePermissions
+            :section="section" 
+            :depth="0" 
+            :searchText='searchText'
+            :offset="0"
+            v-if="isLoaded==true" 
+            class="list-item"
+            @section-in-focus="sectionInFocus"
+            @section-in-blur="sectionBlurred"
+            @section-selected="sectionSelected"
+            @special-key-pressed="keyMonitor" 
+            @special-key-down-pressed="keyDownMonitor"
+            @save-section="saveSections"
+            @backspace-begin-section="backspaceAtBegin"
+            @enter-key-pressed="processEnterKey"
+            />
+          </template>
+      </draggable>
+      <br>
+      <Notes_Add @add-section-click="addNewSection" v-if="haveDocWritePermissions && allowEdit && isLoaded==true" /> 
+      <div ref="scratchPad" id="scratchPad" style="visibility: hidden"></div> 
+    </span>
+    <span v-if="showTags==true">
+      <Notes_Tags />
+    </span>
+    <div>
+      <b-modal id="confirmDelete" 
+        title="Delete Jot" 
+        @show="resetConfirmDeleteText" 
+        @ok="handleConfirmDeleteJot" 
+        @close= "handleCancelDeleteJot"
+        @cancel= "handleCancelDeleteJot"
+        okTitle="Confirm" buttonSize='sm'
+        no-stacking>
+        <span v-html="getConfirmDeleteModalText()"></span>
+        <b-form-input v-model="confirmDeleteText"></b-form-input>      
+      </b-modal>
+    </div>    
+    <div class="col d-xl-none d-lg-none navbottom" v-if="currentFocusedSection.id">
+      <b-navbar type="dark" variant="light" fixed="bottom" >
+        <b-collapse id="nav-collapse" is-nav>
+          <b-navbar-nav>
+            <b-nav-item >
+              <b-button variant="default" size="sm" @mousedown="moveSectionBackwards(currentFocusedSection)" >
+                |<font-awesome-icon size="lg" icon="arrow-left" /> Shift Left
+              </b-button>
+            </b-nav-item>
+            <b-nav-item>
+              <b-button variant="default" size="sm" @mousedown="moveSectionForwards(currentFocusedSection)" >
+                Shift Right <font-awesome-icon size="lg" icon="arrow-right" />| 
+              </b-button>
+            </b-nav-item>
+          </b-navbar-nav>
+        </b-collapse>
+      </b-navbar>
+    </div>      
   </span>
 </template>
 
@@ -108,7 +126,8 @@ export default
       showTags: false,
       currentSectionId:null,
       error:"",
-      confirmDeleteText:""
+      confirmDeleteText:"",
+      lastSectionInFocus:{}
     }
   },  
   props: {
@@ -269,6 +288,10 @@ export default
   },    
   methods: 
   {
+    clickTest()
+    {
+      console.log('test');
+    },
     backspaceAtBegin(event, section)
     {
       var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
@@ -811,7 +834,6 @@ export default
     },  
     dragUpdate(dragDetails) 
     {
-      console.log(dragDetails);;
       var event = dragDetails.event;
       var s = dragDetails.section;
       var l = dragDetails.list;
@@ -822,12 +844,10 @@ export default
       var elementType='';
       if (event[Common.DragEvent_Added])
       {
-        console.log('moving without');
         elementType=Common.DragEvent_Added;
       }
       else if (event[Common.DragEvent_Move])
       {
-        console.log('moving within');
         elementType = Common.DragEvent_Move
       }
       else
@@ -846,6 +866,7 @@ export default
         parentSection, 
         parentSection, 
         newIndex); 
+
     },     
     // dragEnd(event)
     // {
@@ -1145,6 +1166,10 @@ export default
     },    
     moveSectionForwards(section)
     {
+      if (!section)
+      {
+        return
+      }
       var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
       var priorSection = this.getPriorSectionInSameParent(parentSection, section);
 
@@ -1155,10 +1180,19 @@ export default
       else
       {
         Operations.moveSectionOps(this.$store, section, parentSection, priorSection);
+
+        Common.sleep(5).then(() => 
+        {
+          document.getElementById(section.id).focus();
+        });                
       }
     },    
     moveSectionBackwards(section)
     {     
+      if (!section)
+      {
+        return
+      }
       var fromParent = this.getSectionById([this.currentMainSection], section.parentSection, false);          
       var toParent = this.getSectionById([this.currentMainSection], fromParent.parentSection, false); 
       var fromParentIndex = this.getSectionIndexById(toParent.sections, fromParent.id);
@@ -1166,6 +1200,11 @@ export default
       {
         // console.log( toParent, fromParent, (fromParentIndex+1));
         Operations.moveSectionOps(this.$store, section, fromParent, toParent, (fromParentIndex+1));
+
+        Common.sleep(5).then(() => 
+        {
+          document.getElementById(section.id).focus();
+        });          
       }         
     },    
     deleteBlankSection(sectionToDelete)
@@ -1197,6 +1236,7 @@ export default
       this.currentFocusedSection=section;
       this.currentFocusedSectionDepth=depth;
 
+      this.lastSectionInFocus = section;
       Comms.wsEmit(this.$socket, Common.WSTypes.SectionInFocus, { jotId: this.currentJotId, sectionId: section.id} ); 
     },
     sectionBlurred(event, section, depth)
@@ -1298,6 +1338,11 @@ export default
 
 .flip-list-move {
   transition: transform 1s;
+}
+
+.navbottom
+{
+  padding-bottom: 20px;
 }
 </style>
 
