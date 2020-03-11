@@ -126,26 +126,26 @@ exports.Operation_updateJot = function(db, eId, data, callback)
 }
 
 //HELPERS
-parseJotRecord = function(eId, jotRecord)
-{
-	if (jotRecord)
-	{
-		var permissions= new Objects.Permissions();
-		permissions.setDocumentPermissions(jotRecord);	
+// parseJotRecord = function(eId, jotRecord)
+// {
+// 	if (jotRecord)
+// 	{
+// 		var permissions= new Objects.Permissions();
+// 		permissions.setDocumentPermissions(jotRecord);	
 
-		var canRead =  permissions.canRead(eId);
-		var canWrite = permissions.canWrite(eId);
-		var isOwner = permissions.isOwner(eId);
-		var eIdPermissions = {
-			read: canRead, 
-			write: canWrite,
-			isOwner: isOwner
-		};
-		jotRecord.permissions=eIdPermissions;		
-	}
+// 		var canRead =  permissions.canRead(eId);
+// 		var canWrite = permissions.canWrite(eId);
+// 		var isOwner = permissions.isOwner(eId);
+// 		var eIdPermissions = {
+// 			read: canRead, 
+// 			write: canWrite,
+// 			isOwner: isOwner
+// 		};
+// 		jotRecord.permissions=eIdPermissions;		
+// 	}
 	
-	return jotRecord;
-}
+// 	return jotRecord;
+// }
 
 getJotUpdateQuery = function(data)
 {

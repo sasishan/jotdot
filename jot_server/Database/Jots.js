@@ -104,40 +104,82 @@ exports.API_getAllJots= function(db, eId, data, callback)
 	}	
 }
 
+exports.getRequiredPermissions = function(eId, jotRecord)
+{
+	var permissions= new Objects.Permissions();
+	permissions.setDocumentPermissions(jotRecord);
+
+	var requireReadPermissions = true;
+	var requireWritePermissions = false;
+	//check if this Jot is publicly shared
+	// var requiredPermissions = new Objects.RequiredPermissions(eId, requireRead, requireWrite);
+	if (permissions.isPublicAccessible())
+	{
+		var requireReadPermissions = false; // if public accessible they can read it
+		// var requireWritePermissions = true; //but cant write it
+		// requiredPermissions = new Objects.RequiredPermissions(eId, false, false);
+	}
+
+	var requiredPermissions = new Objects.RequiredPermissions(eId, requireReadPermissions, requireWritePermissions);
+	return requiredPermissions;
+
+};
+
+//GET THE JOT RECORD ITSELF - NOT ITS SECTIONS
 exports.API_getOneJot = function(db, eId, data, callback)
 {
 	var jotId = Helpers.getField(data, OpsConfig.APIPath_JotId, []);
 
 	if (eId && jotId.isValid())
-	{
+	{		
 		var documentId = jotId.getValue();
-		var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
-		Permissions.validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
+
+		//get permissions for the Jot
+		exports.permitted_getJotRecord(db, null, documentId, function(error, jotRecord)
 		{
-			if (error)
+			if (error || jotRecord.length==0)
 			{
 				return callback(error, null);
 			}
 
-			if (isPermitted==true)
+			// var permissions= new Objects.Permissions();
+			// permissions.setDocumentPermissions(jotRecord[0]);
+
+			// //check if this Jot is publicly shared
+			// var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
+			// if (permissions.isPublicAccessible())
+			// {
+			// 	requiredPermissions = new Objects.RequiredPermissions(eId, false, false);
+			// }
+			var requiredPermissions = exports.getRequiredPermissions(eId, jotRecord[0]);
+			// return callback(null, permissions);
+			Permissions.validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
 			{
-				exports.permitted_getJotRecord(db, null, documentId, function(error, docRecord)
+				if (error)
 				{
-					if (error || docRecord.length==0)
-					{
-						return callback(error, null);
-					}
+					return callback(error, null);
+				}
 
-					docRecord[0] = parseJotRecord(eId, docRecord[0]);
-					return callback(null, docRecord);
-				});			
-			}
-			else
-			{
-				// var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
-				var error = Helpers.LogUnauthorizedError();
-				return callback(error, null);
-			}
+				if (isPermitted==true)
+				{
+					// exports.permitted_getJotRecord(db, null, documentId, function(error, docRecord)
+					// {
+					// 	if (error || docRecord.length==0)
+					// 	{
+					// 		return callback(error, null);
+					// 	}
+
+						jotRecord[0] = parseJotRecord(eId, jotRecord[0]);
+						return callback(null, jotRecord);
+					// });			
+				}
+				else
+				{
+					// var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
+					var error = Helpers.LogUnauthorizedError();
+					return callback(error, null);
+				}
+			});				
 		});		
 	}
 	else
@@ -203,11 +245,14 @@ parseJotRecord = function(eId, jotRecord)
 		var canRead =  permissions.canRead(eId);
 		var canWrite = permissions.canWrite(eId);
 		var isOwner = permissions.isOwner(eId);
+		var isPublic = permissions.isPublicAccessible();
 		var eIdPermissions = {
 			read: canRead, 
 			write: canWrite,
-			isOwner: isOwner
+			isOwner: isOwner,
+			isPublic: isPublic
 		};
+
 		jotRecord.permissions=eIdPermissions;		
 	}
 	
@@ -343,7 +388,8 @@ exports.getAllReadableJots = function(db, eId, callback)
 	{
 		'$or' : [ 
 				{ [OpsConfig.SectionFields.EmployeeId]: eId }, 
-				{ [OpsConfig.Permissions_Read]: { $in: [eId] }}
+				{ [OpsConfig.Permissions_Read]: { $in: [eId] }} , 
+				{ [OpsConfig.Permissions_IsPublic]: true }
 			]
 	};
 

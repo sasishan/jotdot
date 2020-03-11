@@ -2,6 +2,7 @@ var OpsConfig={};
 
 OpsConfig.Permissions_Read = 'permissions.read';
 OpsConfig.Permissions_Write = 'permissions.write';
+OpsConfig.Permissions_IsPublic = 'permissions.isPublic';
 // OpsConfig.Permissions_Read_Write = 'permissions.read_write'
 
 OpsConfig.ValidOperationsTypes = 
@@ -81,6 +82,10 @@ OpsConfig.APIPaths=
     DELETE_OneJot:'/api/v1/jots/delete/:'+ OpsConfig.APIPath_JotId,
     GET_AllTags: '/api/v1/tags',
     GET_TagSections: '/api/v1/tags/:'+OpsConfig.APIPath_TagName,
+
+    GET_ANONYMOUS_AllJots: '/api/v1/anonymous/documents',
+    GET_ANONYMOUS_OneJotsSections: '/api/v1/anonymous/documents/:'+ OpsConfig.APIPath_JotId,
+    GET_ANONYMOUS_OneJot: '/api/v1/anonymous/jots/:'+ OpsConfig.APIPath_JotId,
 };
 
 OpsConfig.GET_AllDocuments_Projection= { projection: {documentId: 1, title: 1, permissions: 1, eId: 1 , created:1, lastUpdated:1, _id: 0}};

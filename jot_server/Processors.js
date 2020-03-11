@@ -23,7 +23,7 @@ exports.getProcessor = function(operationType)
 			return Sections.Operation_moveSection;			
 
 		default:
-			console.log('Invalid operation type '+ operationType + ' found for processor');
+			console.log('Processors:getProcessor: Invalid operation type '+ operationType + ' found for processor');
 			return undefined;
 	}
 };
@@ -52,9 +52,19 @@ exports.getAPIProcessor = function(apiPath)
 
 		case OpsConfig.APIPaths.GET_TagSections:
 			return Tags.API_getSectionsForTag;
+
+		//Anonymous API routes
+		case OpsConfig.APIPaths.GET_ANONYMOUS_AllJots:
+			return Jots.API_getAllJots;		
 			
+		case OpsConfig.APIPaths.GET_ANONYMOUS_OneJotsSections:
+			return Sections.API_getOneDocumentsSections;	
+
+		case OpsConfig.APIPaths.GET_ANONYMOUS_OneJot:
+			return Jots.API_getOneJot;
+
 		default:
-			console.log('Invalid path: '+ apiPath + ' found for processor');
+			console.log('Processors:getAPIProcessor: Invalid path: '+ apiPath + ' found for processor');
 			return undefined;
 	}
 };

@@ -5,7 +5,7 @@
   Jot Dot is a free note making tool based on the popular Workflowy tool. It is currently in beta.
   You can email the developer at sasi.shanmugarajah at gmail.com.
   <br>
-  <small>version: beta_1.0.2</small>
+  <small>version: beta_1.0.3</small>
   </div>
 </template>
 

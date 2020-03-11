@@ -9,7 +9,7 @@ Common.AppName = "JotDot";
 Common.DefaultDebounceTimeInMS = 5;
 Common.DefaultOpsQueuePollingInMS = 5000;
 Common.DefaultTextChangePollingInMS = 3000;
-Common.DefaultDebounceInMS = 5;
+Common.DefaultDebounceInMS = 2;
 Common.MaxBreadCrumbText = 30;
 Common.HashTagMatch = /#\S+/g;
 
@@ -20,6 +20,9 @@ Common.TagContentClass="tagContent";
 Common.HashTagTextClass="hashTagText";
 Common.TagContentNubClass = "tagContentEnd";
 Common.PersonTag = '@';
+
+Common.MobilePhoneWidthSize = 740;
+Common.DesktopWidthSize = 1200;
 
 Common.PersonTag = /@\S+/g;
 Common.SearchPlaceholder="Search this jot..."
@@ -33,6 +36,13 @@ Common.Key_Shift = "Shift";
 Common.Key_Up = "ArrowUp";
 Common.Key_Down = "ArrowDown";
 Common.Key_Control='Control';
+
+Common.ShiftLeftEvent= 'shiftLeft';
+Common.ShiftRightEvent='shiftRight';
+Common.ShiftUpEvent= 'shiftUp';
+Common.ShiftDownEvent='shiftDown';
+Common.StrikeThroughEvent='strikeThrough';
+Common.FocusLastSectionEvent = 'focusLastSection';
 
 Common.MAX_UNDO_ITEMS = 20;
 
@@ -78,7 +88,10 @@ Common.URLS =
    DeleteJot: urlBase+"/api/v1/jots/delete/",
    GetTags: urlBase+"/api/v1/tags/",
    GetTagSections: urlBase+"/api/v1/tags/sections",
-   WSServerURL: urlBase
+   WSServerURL: urlBase,
+
+   Documents_Anonymous: urlBase+"/api/v1/anonymous/documents/",
+   OneJot_Anonymous: urlBase+"/api/v1/anonymous/jots/",
 }
 
 Common.OperationTypes = 
@@ -100,29 +113,76 @@ Common.WSTypes =
 Common.KeyEventTypes=
 {
     ShiftTab:'shift_tab',
+    Tab: 'tab',
     BackspaceBlankSection: 'backspace-blank-section',
     Up: 'key-up',
-    Down: 'key-down'
+    Down: 'key-down',
+    ShiftDown: 'shift_down',
+    ShiftUp: 'shift_up',
 }
 
 Common.DragEvent_Added='added';
 Common.DragEvent_Move='moved';
 
-Common.GoToSection = function(documentId, sectionId, router)
+Common.GoToSection = function(documentId, sectionId, router, isSignedIn)
 {
-  router.push({name:'sectionsById', params: { jotId: documentId, sectionId: sectionId}});
+  if (isSignedIn)
+  {
+    router.push({name:'sectionsById', params: { jotId: documentId, sectionId: sectionId}});
+  }
+  else
+  {
+    router.push({name:'anonymousSectionsById', params: { jotId: documentId, sectionId: sectionId}});
+  }
 }
 
-Common.GoToJots = function(router)
+Common.GoToJotById = function(documentId, router, isSignedIn)
 {
-  console.log('j');
-  router.push({name:'jots'});
+  if (isSignedIn)
+  {
+    router.push({name:'jotsById', params: { jotId: documentId}});
+  }
+  else
+  {
+    router.push({name:'anonymousJotsById', params: { jotId: documentId}});
+  }   
+
 }
+
+Common.GoToAnonymousJotById = function(documentId, router)
+{
+  router.push({name:'anonymousJotsById', params: { jotId: documentId}});
+}
+
+Common.GoToJots = function(router, isSignedIn)
+{
+  if (isSignedIn)
+  {
+    router.push({name:'jots'});
+  }
+  else
+  {
+    router.push({name:'anonymousJots'});
+  }  
+  
+}
+
+// Common.GoToAnonymousSection = function(documentId, sectionId, router)
+// {
+//   router.push({name:'anonymousSectionsById', params: { jotId: documentId, sectionId: sectionId}});
+// }
+
+// Common.GoToAnonymousHome = function(router)
+// {
+//   router.push({name:'anonymousJots'});
+// }
 
 Common.GoToSignIn = function(router)
 {
   router.push({name:'signin'});
 }
+
+
 
 Common.Copy= function(from, to)
 {
@@ -144,6 +204,21 @@ Common.DragOptions =
 
 Common.sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
+};
+
+Common.getJotPermissions=function(jot)
+{
+  var permissionsText="";
+  if (jot.permissions.read && !jot.permissions.write)
+  {
+    permissionsText+="read only";
+  }
+  console.log(jot);
+  if (jot.permissions.isPublic && jot.permissions.isPublic==true)
+  {
+    permissionsText+=" public";
+  }
+  return permissionsText;
 };
 
 Common.setEndOfContenteditable = function(contentEditableElement)

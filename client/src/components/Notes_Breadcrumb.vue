@@ -1,33 +1,50 @@
 <template>
   <div>
-  <b-link :to="{ name: 'jots'}">
-    All Jots
+  <b-link @click="clickHome">
+    All Jots 
   </b-link> 
    > 
-  <b-link :to="{ name: 'jotsById', params: { jotId: jot.documentId }}" >
+  <b-link @click="clickTitle" >
     {{ jot.title  }}
   </b-link> 
   <span v-for="(section, index) in sectionsStack.slice().reverse()"> 
     > 
-    <b-link :to="{ name: 'sectionsById', params: { sectionId: section.id }}" >{{section.text}}</b-link>
+    <b-link @click="clickSection(section.id)">{{section.text}}</b-link>
   </span>
   </div>
 </template>
 
 <script>
-
+import Common from '../Common.js';
 export default 
 {
   name: 'Notes_Breadcrumb',
   props: {
     sectionsStack:{},
     allowEdit:{},
-    jot: {}
+    jot: {}, 
   },
   computed: {
+    isSignedIn()
+    {
+      return this.$store.state.signedIn;
+    }
   },  
   methods: 
   {
+    clickHome()
+    {      
+      Common.GoToJots(this.$router, this.$store.state.signedIn);
+    },
+    clickTitle()
+    {
+      Common.GoToJotById(this.jot.documentId, this.$router, this.$store.state.signedIn);
+    },
+    clickSection(sectionId)
+    {
+// :to="{ name: 'sectionsById', params: { sectionId: section.id }}"      
+      Common.GoToSection(this.jot.documentId, sectionId, this.$router, this.$store.state.signedIn);
+    }
   }
 }
 

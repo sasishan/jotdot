@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <NavMenu v-if="isSignedIn" />
+    <NavMenu :signedIn="isSignedIn" />
     <br>
     <b-container class="main_container">
       <div class="col-lg-12 main mb-5">      
@@ -28,15 +28,14 @@ export default
   async beforeCreate() 
   {
     await AuthHelper.updateSignInStatus(this.$store);
-    if (this.$store.state.signedIn === true) 
+    if (this.$store.state.signedIn === false) 
     {
-      
-      Common.GoToJots(this.$router);
+      Common.GoToJots(this.$router, this.$store.state.signedIn);
     }
-    else 
-    {
-      Common.GoToSignIn(this.$router);
-    }    
+    // else 
+    // {
+    //   // Common.GoToSignIn(this.$router);
+    // }    
   },    
   computed: 
   {

@@ -1,23 +1,26 @@
-import Vue from 'vue'
-import App from './App.vue'
+import Vue from 'vue';
+const App = () => import('./App.vue')
 import VueRouter from 'vue-router';
 import { store } from './store';
-import Axios from 'axios'
-import BootstrapVue from 'bootstrap-vue'
+import Axios from 'axios';
+import BootstrapVue from 'bootstrap-vue';
 import Amplify, * as AmplifyModules from 'aws-amplify'
 import { AmplifyPlugin } from 'aws-amplify-vue'
 import { Auth } from 'aws-amplify'
 import UUID from 'vue-uuid';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { library } from '@fortawesome/fontawesome-svg-core'
-import Notes_Section from './components/Notes_Section.vue';
+const Notes_Section = () => import('./components/Notes_Section.vue');
 import sanitizeHTML from 'sanitize-html';
 import io from 'socket.io-client';
 import VueSocketIO from 'vue-socket.io';
+import Common from './Common.js';
+// import Vue2TouchEvents from 'vue2-touch-events';
+
 
 // import moment from 'moment';
 import {faSquare, faArrowCircleRight, faCircle, faAngleUp, faCog, faHashtag, faBars,
-        faAngleDown, faTrashAlt, faSpinner, faEdit, faPrint, faArchive, faEllipsisH, faTimes, faArrowLeft, faArrowRight} from '@fortawesome/free-solid-svg-icons';
+        faAngleDown, faTrashAlt, faSpinner, faEdit, faPrint, faArchive, faEllipsisH, faTimes, faArrowLeft, faArrowRight, faArrowUp, faArrowDown} from '@fortawesome/free-solid-svg-icons';
 // import awsmobile from './aws-exports'
 
 const awsconfig = {
@@ -94,9 +97,10 @@ Vue.config.productionTip = false
 Vue.prototype.$http = Axios;
 // Vue.prototype.moment = moment;
 
+console.log(Common.URLS.WSServerURL);
 Vue.use(new VueSocketIO({
     debug: true,
-    connection: 'http://localhost:3020', //options object is Optional
+    connection: Common.URLS.WSServerURL, //options object is Optional
     vuex: {
       store,
       actionPrefix: "SOCKET_",
@@ -116,14 +120,17 @@ Vue.prototype.$sanitize = sanitizeHTML;
 library.add(faEdit, faSquare, faArrowCircleRight, 
     faCircle, faBars, faAngleUp, faAngleDown, faTrashAlt, 
     faSpinner, faPrint, faCog, faHashtag, faArchive, faEllipsisH, 
-    faArrowRight, faArrowLeft, faTimes);
+    faArrowRight, faArrowLeft, faArrowUp, faArrowDown, faTimes);
 Vue.component('font-awesome-icon', FontAwesomeIcon)
 
-Vue.use(BootstrapVue)
+Vue.use(BootstrapVue);
+// Vue.use(Vue2TouchEvents);
+
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
 
 import draggable from 'vuedraggable'
+Vue.prototype.$eventHub = new Vue(); // Global event bus
 
 new Vue({
 	store,

@@ -79,13 +79,11 @@ export default
         	var position;
         	if (newIndex==Common.APPEND_SECTION || newIndex>=newParent.sections.length)
         	{
-    			console.log('a');
         		this.addExistingSection(sectionToMove, newParent);
         		position = newParent.sections.length-1;		
         	}
         	else
         	{
-        		console.log('b');
         		position=newIndex;
         		this.addExistingSection(sectionToMove, newParent, newIndex);		
         	}

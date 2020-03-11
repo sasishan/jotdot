@@ -2,6 +2,7 @@ var  Database  = require('../Database/Database')
 	,Permissions = require('../Database/Permissions')
 	,Helpers  = require('../Helpers')
 	,OpsConfig = require('../OperationsConfig')
+	,Jots = require('../Database/Jots')
 	,Objects = require('../Objects');
 
 //OPERATION PROCESSORS
@@ -328,28 +329,38 @@ exports.API_getOneDocumentsSections = function(db, eId, data, callback)
 	if (eId && docId.isValid())
 	{
 		var documentId = docId.getValue();
-		var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
-		Permissions.validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
+		Jots.permitted_getJotRecord(db, null, documentId, function(error, jotRecord)
 		{
-			if (error)
+			if (error || jotRecord.length==0)
 			{
 				return callback(error, null);
 			}
 
-			if (isPermitted==true)
+			var requiredPermissions = Jots.getRequiredPermissions(eId, jotRecord[0]);
+			Permissions.validateDocumentPermissions(db, documentId, requiredPermissions, function(error, isPermitted)
 			{
-				buildDocument(db, eId, documentId, function(error, document)
+				if (error)
 				{
-					return callback(error, document);
-				});					
-			}
-			else
-			{
-				// var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
-				var error = Helpers.LogUnauthorizedError();
-				return callback(error, null);
-			}
+					return callback(error, null);
+				}
+
+				if (isPermitted==true)
+				{
+					buildDocument(db, eId, documentId, function(error, document)
+					{
+						return callback(error, document);
+					});					
+				}
+				else
+				{
+					// var error = Helpers.logError('Not authorized to view this document', Helpers.UNAUTHORIZED);
+					var error = Helpers.LogUnauthorizedError();
+					return callback(error, null);
+				}
+			});
+
 		});		
+		// var requiredPermissions = new Objects.RequiredPermissions(eId, true, false);
 	}
 	else
 	{
@@ -489,7 +500,7 @@ buildDocument = function(db, eId, documentId, callback)
         , 
         { $match: {
         	"documentId": documentId, 
-        	"eId": eId, 
+        	// "eId": eId, 
         	[OpsConfig.SectionFields.ParentSection]: "-1" } }
 
        //  {$group:{

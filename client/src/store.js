@@ -7,6 +7,7 @@ import OpsConfig from './OperationsConfig.js';
 import Comms from './components/Comms.vue';
 
 const axios = require('axios')
+var initialJot = { documentId: '-1'};
 
 Vue.use(Vuex);
 
@@ -21,7 +22,7 @@ export const store = new Vuex.Store({
 	{
 		//Cognito Signin
 		cognitoInfo:{},
-		currentJot:{ documentId: '-1'},
+		currentJot:  { documentId: '-1'},
 		signedIn: false, 
 		username: "Not Initialized",
 		isLoaded: false,
@@ -173,15 +174,34 @@ export const store = new Vuex.Store({
 
 	   //  },	
 	    async getOneJotsPermissions(state, jotId)
-	    {
+	    {	    
 	   		if (jotId)
 	   		{
 				var url = Common.URLS.OneJot + jotId;
-				var jot = await Comms.get(url).catch((error) => 
-				{ 
-					// console.error(error); 
-					return {error: error, jot: null};
-				});
+				var jot ={};
+				if (this.getters.getSignedInState==true)
+				{
+					jot = await Comms.get(url).catch((error) => 
+					{ 
+						// console.error(error); 
+						return {error: error, jot: null};
+					});
+				}
+				else
+				{
+					url = Common.URLS.OneJot_Anonymous + jotId;	
+					jot = await Comms.anonymousGet(url).catch((error) => 
+					{ 
+						return {error: error, jot: null};
+					});
+				}
+
+				// var url = Common.URLS.OneJot + jotId;
+				// var jot = await Comms.get(url).catch((error) => 
+				// { 
+				// 	// console.error(error); 
+				// 	return {error: error, jot: null};
+				// });
 
 				if (jot && jot.length>0)
 				{
@@ -198,10 +218,22 @@ export const store = new Vuex.Store({
 			if (jotId)
 			{
 				var url = Common.URLS.Documents + jotId;
-				var items = await Comms.get(url).catch((error) => 
-				{ 
-					loadError=error;
-				});
+				if (this.getters.getSignedInState==true)
+				{
+					var items = await Comms.get(url).catch((error) => 
+					{ 
+						loadError=error;
+					});
+				}
+				else
+				{
+					url = Common.URLS.Documents_Anonymous + jotId;	
+					var items = await Comms.anonymousGet(url).catch((error) => 
+					{ 
+						loadError=error;
+					});
+				}
+
 
 				if (loadError)
 				{
@@ -277,7 +309,7 @@ export const store = new Vuex.Store({
 			state.currentMainSection= {};
 			state.currentSelection.splice(0, state.currentSelection.length);
 			state.lastAddedSection={};
-			state.currentJot = {};
+			// state.currentJot = {};
 			state.jotsList = [];
 			state.currentDocumentId = null;
 			state.currentJot = null;

@@ -5,7 +5,8 @@
         @format-text="formatText"         
         :section="section" 
         :showFormatting="formattingInProgress"
-        :undoLength="getUndo().length"/>             
+        :undoLength="getUndo().length"
+        v-if="!isMobile()"/>             
     </span>     
     <span :style="upIndent" v-if="getSectionsLength>0 && allowEdit==true" >
       <Notes_Up @updown-click="openCloseSection" :open="getOpenState" />        
@@ -15,10 +16,11 @@
         @click-section="clickShowSectionMenu"
         :sectionId="getId" 
         :undoLength="getUndo().length"
-        v-if="allowEdit==true" 
+        v-if="isSignedIn && allowEdit==true" 
         @set-plain-text="convertToPlainText"
         @undoLast="undoLast()"
-        :showSectionMenu="showSectionMenu"/>      
+        :showSectionMenu="showSectionMenu"
+        />      
     </span>    
      <span :style="bulletIndent" v-if="allowEdit==true">
       <Notes_Flyout @flyout-click="selectSection" :section="section" :sectionId="getId" v-if="allowEdit==true"/>      
@@ -80,7 +82,7 @@ import draggable from 'vuedraggable';
 import TextFormatter from '../TextFormatter.js';
 import { uuid } from 'vue-uuid';
 import sanitizeHTML from 'sanitize-html';
-import TipTap from '../components/TipTap';
+
 
 export default 
 {
@@ -103,7 +105,6 @@ export default
     Sections_Editor,
     Notes_Formatter,
     draggable, 
-    TipTap 
   },
   mounted()
   {
@@ -113,6 +114,15 @@ export default
 
     //JQUERY events to catch tags
     this.setTagClick();
+
+    this.$eventHub.$on(Common.ShiftLeftEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftLeftEvent)});
+    this.$eventHub.$on(Common.ShiftRightEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftRightEvent)});
+    this.$eventHub.$on(Common.ShiftUpEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftUpEvent)});
+    this.$eventHub.$on(Common.ShiftDownEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftDownEvent)});
+    this.$eventHub.$on(Common.StrikeThroughEvent, (sectionId) => {this.mobileFormatSection(sectionId, Common.StrikeThroughEvent)});
+
+    // bus.$on('d', this.mobileMoveSection('left'));
+    // bus.$on('shiftRight', this.mobileMoveSection('right'));
   },
   data: function() 
   {
@@ -207,6 +217,10 @@ export default
   },
   computed: 
   {
+    isSignedIn()
+    {
+      return this.$store.state.signedIn;
+    },     
     showSeparator()
     {
       return (!this.allowEdit && this.getSections.length>0);
@@ -253,7 +267,7 @@ export default
       else
       {
         // content= '<li> ' +this.section.html +'</li>'; 
-        content= '- ' +this.section.html; 
+        content= '#### ' +this.section.html; 
       }
 
       // return content;
@@ -430,10 +444,19 @@ export default
       }
     }
   },  
-  filters: {
-  },  
-  destroyed()
+  filters: 
   {
+  },
+  beforeDestroy () 
+  {
+    this.$eventHub.$off(Common.ShiftLeftEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftLeftEvent)});
+    this.$eventHub.$off(Common.ShiftRightEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftRightEvent)});
+    this.$eventHub.$off(Common.ShiftUpEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftUpEvent)});
+    this.$eventHub.$off(Common.ShiftDownEvent, (sectionId) => {this.mobileMoveSection(sectionId, Common.ShiftDownEvent)});    
+    this.$eventHub.$off(Common.StrikeThroughEvent, (sectionId) => {this.mobileFormatSection(sectionId, Common.StrikeThroughEvent)});
+  },    
+  destroyed()
+  {   
     this.stopPolling();
   },
   methods:
@@ -525,7 +548,13 @@ export default
     {
       // console.log(event);
       event.preventDefault();
+
       var content = this.getSanitized(event.clipboardData.getData('text/html'));
+      if (!content)
+      {
+        content = this.getSanitized(event.clipboardData.getData('text'));
+      }
+      // console.log('pasteContent', content, event.clipboardData.getData('text/html'));
       document.execCommand('insertHTML', false, content);
       // console.log('pasted: '+ event.clipboardData.getData('text/plain'));
     },  
@@ -756,9 +785,28 @@ export default
       
       el.focus(); 
 
-      // this.section.html= this.$refs.section_text.innerHTML;
-      // this.section.text= this.$refs.section_text.innerText;
+    },
+    mobileFormatSection(sectionId, type)
+    {
+      if (this.section.id==sectionId)
+      {
+        var el = this.$refs.section_text;
+        TextFormatter.selectElementContents(el);
+        document.execCommand(type, false , null);
 
+        // this.formattingEnded();
+        this.checkAndQueueDeltaChange(this);
+        var range = document.createRange();
+        var sel = window.getSelection();
+
+        range.collapse(true);      
+        sel.removeAllRanges();
+        sel.addRange(range);             
+        Common.sleep(Common.DefaultDebounceInMS).then(() => 
+        {
+          document.getElementById(el.focus());
+        }); 
+      }
     },
     highlight (string, query) 
     {
@@ -1176,6 +1224,31 @@ export default
         }
       });
     },
+    mobileMoveSection(sectionId, direction)
+    {
+      // console.log('mobileMoveSection', this.section.id, sectionId, direction);
+      if (this.section.id==sectionId)
+      {
+        // console.log('shifting', 'id=',sectionId, 'd=',direction);
+        this.commitContentsToSection();
+        if (direction==Common.ShiftRightEvent)
+        {
+          this.emitKeyDownPress({}, Common.KeyEventTypes.Tab, this.section);          
+        }
+        else if (direction==Common.ShiftLeftEvent)
+        {
+          this.emitKeyDownPress({}, Common.KeyEventTypes.ShiftTab, this.section);          
+        }
+        else if (direction==Common.ShiftUpEvent)
+        {
+          this.emitKeyDownPress({}, Common.KeyEventTypes.ShiftUp, this.section);          
+        }
+        else if (direction==Common.ShiftDownEvent)
+        {
+          this.emitKeyDownPress({}, Common.KeyEventTypes.ShiftDown, this.section);          
+        }
+      }
+    },
     keyDownMonitor(event)
     {
       this.resetSearchText();
@@ -1229,7 +1302,7 @@ export default
       }      
       else if (!this.shiftPressed && event.key=="Enter")
       {
-        console.log('key down enter');
+        // console.log('key down enter');
         // this.commitContentsToSection();        
         this.emitEnterDownPress(event, this.section, this.$refs.section_text.textContent, this.$refs.section_text.innerHTML);
         if (event) event.preventDefault();
@@ -1241,6 +1314,7 @@ export default
         var result = TextFormatter.DeleteNonContentEditable(event.target);
         if (result)
         {
+          // console.log('h2', result);
           event.preventDefault();
           event.stopPropagation();  
         }
@@ -1249,6 +1323,7 @@ export default
           var src = event.target.innerText
           if (src.trim()=="")
           {
+            // console.log('h1');
             this.sectionIsDeleted=true;
             this.emitKeyDownPress(event, 'backspace-blank-section', this.section);
             event.stopPropagation(); 
@@ -1260,26 +1335,31 @@ export default
             var pos = TextFormatter.getCaretPixelPos(event.target);
             this.lastOffsetX = pos.left;
             this.lastOffsetY = pos.top;
+            // return;
+            // console.log('pos', pos);
             
-            Common.sleep(Common.DefaultDebounceInMS).then(() => 
-            {
-              var pos = TextFormatter.getCaretPixelPos(event.target);
-              if (this.lastOffsetX==pos.left && this.lastOffsetY==pos.top)
-              {
-                this.sectionIsDeleted=true;
-                this.commitContentsToSection();
-                this.$emit('backspace-begin-section', event, this.section);
+            // Common.sleep(0).then(() => 
+            // {
+            //   // var pos = TextFormatter.getCaretPixelPos(event.target);
+            //   // console.log('pos2', pos);
+            //   // if (this.lastOffsetX==pos.left && this.lastOffsetY==pos.top)
+            //   // {
+            //   //   console.log('emit1');
+            //   //   this.sectionIsDeleted=true;
+            //   //   this.commitContentsToSection();
+            //   //   this.$emit('backspace-begin-section', event, this.section);
 
-                // event.preventDefault();
-                // event.stopPropagation();                  
-                // this.emitKeyDownPress(event, 'backspace-begin-section', this.section);  
-              }          
-              else
-              {
-                this.lastOffsetX=pos.left;
-                this.lastOffsetY = pos.top;
-              }
-            });            
+            //   //   // event.preventDefault();
+            //   //   // event.stopPropagation();                  
+            //   //   // this.emitKeyDownPress(event, 'backspace-begin-section', this.section);  
+            //   // }          
+            //   // else
+            //   // {
+            //     console.log('emit2');
+            //     this.lastOffsetX=pos.left;
+            //     this.lastOffsetY = pos.top;
+            //   // }
+            // });            
           }      
         }
       }

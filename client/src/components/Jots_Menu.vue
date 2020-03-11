@@ -14,8 +14,8 @@
     <b-button variant="outline-primary text" size="sm" v-on:click="togglePrint()" class="ml-2">
       <font-awesome-icon size="sm" icon="print""/> {{toggleText}}
     </b-button>
-    <b-button variant="outline-danger text" size="sm" v-on:click="deleteJot()" class="ml-2">
-      <font-awesome-icon size="sm" icon="trash-alt""/>  
+    <b-button variant="outline-danger text" size="sm" v-on:click="deleteJot()" class="ml-2" >
+      <font-awesome-icon size="sm" icon="trash-alt"/>  
     </b-button> 
   </div-->
 </div>
@@ -32,7 +32,10 @@ export default
   props: {
   },
   computed: {
-
+    isSignedIn()
+    {
+      return this.$store.state.signedIn;
+    },
   },  
   methods: 
   {

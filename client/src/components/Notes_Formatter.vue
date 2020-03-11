@@ -77,8 +77,8 @@ export default
     {
       this.startFormatting();
       this.emitFormatText(event, type);
-              event.preventDefault();
-        event.stopPropagation();       
+      event.preventDefault();
+      event.stopPropagation();       
 
     },
     emitFormatText(event, type)

@@ -37,6 +37,7 @@ Objects.Permissions = function()
   this.read={};
   this.write={};
   this.append={};
+  this.isPublic=false;
   this.ownerEID=undefined;
 
   this.setDocumentPermissions = function(docRecord)
@@ -58,12 +59,21 @@ Objects.Permissions = function()
     {
       this.grantWrite(this.permissions.write[i]);
     }    
-  }
+
+    if (docRecord.permissions.isPublic!=null && docRecord.permissions.isPublic!=undefined)
+    {
+      this.isPublic=docRecord.permissions.isPublic;
+    }
+    else
+    {
+      this.isPublic=false;
+    }
+  };
 
   this.setOwner = function(eId)
   {
     this.ownerEID=eId;
-  }
+  };
 
   this.grantRead = function(eId)
   {
@@ -85,7 +95,17 @@ Objects.Permissions = function()
     {
       return false;
     }
-  }
+  };
+
+  this.isPublicAccessible = function()
+  {
+    return this.isPublic;  
+  };
+
+  this.setPublicAccessible = function(isPublic)
+  {
+    this.isPublic= isPublic;
+  };
 
   this.canWrite = function(eId)
   {

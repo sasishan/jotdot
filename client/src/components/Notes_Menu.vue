@@ -6,7 +6,7 @@
     :style="getStyle" 
     @mouseover="hover = true;" 
     @mouseleave="showSectionMenu==false ? hover = false : hover = true;"
-    @click="emitClick"
+    @click="emitClick" 
     />
 
     <div v-if="showSectionMenu" class="menu">

@@ -168,7 +168,31 @@ export default
 			console.log('An error occurred: ', err);
 			return callback(err, null);
 		}
-	},		
+	},	
+	async anonymousGet(url)
+	{
+		var headers = getAnonymousHeader();
+		return new Promise(function(resolve, reject) 
+		{
+			try 
+			{
+				axios.get(url, {headers: headers}).then(function(response)
+				{
+					var results = response.data;
+					resolve(results);
+				}, function(error)
+				{
+					console.log('An error occurred: ', error);
+					reject(error);
+				});
+			}
+			catch (err) 
+			{
+				console.log('An error occurred: ', err);
+				reject(err);
+			}		
+		});		
+	},			
 	async get(url)
 	{
 		var headers = await getHeader();

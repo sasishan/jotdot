@@ -107,6 +107,21 @@ TextFormatter.getNodeIndex=function(parent, node)
   return index;
 }
 
+TextFormatter.selectElementContents = function(element)
+{
+  if (!element)
+  {
+    return;
+  }
+  // Clear any current selection
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+
+  // Select paragraph
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.addRange(range);
+}
 // TextFormatter.getFirstHalf = function(position)
 // {
 //   // console.log(position);
@@ -216,7 +231,7 @@ TextFormatter.getCaretPixelPos = function ($node, offsetx, offsety){
 
     if (document.selection){
         var range = document.selection.createRange();
-        pos.left = range.offsetLeft + offsetx - nodeLeft;
+        pos.left = range.c + offsetx - nodeLeft;
         pos.top = range.offsetTop + offsety - nodeTop ;
     }else if (window.getSelection){
         var sel = window.getSelection();

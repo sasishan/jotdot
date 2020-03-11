@@ -26,11 +26,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-
 app.use(function(req, res, next) 
 {
     // CORS headers
+    //https://jotdot.honchohq.com/
     res.header("Access-Control-Allow-Origin", "http://localhost:8080"); // restrict it to the required domain
     res.header("Access-Control-Allow-Credentials", true); // restrict it to the required domain
     res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
@@ -80,6 +79,35 @@ var isAuthenticated = function (req, res, next)
   });
 }
 
+var isNotAuthenticated = function (req, res, next) 
+{
+  // next();
+  // return;  
+  // var accessTokenFromClient = req.headers.accesstoken;
+  // console.log('accesstoken', accessTokenFromClient);
+
+  // if (!accessTokenFromClient) 
+  // {
+  //   return res.status(401).send("Access Token missing from header");
+  // }
+
+  // validateToken(accessTokenFromClient, function(err, response)
+  // {
+  //   if (err) 
+  //   {           
+  //     console.log(err);
+  //     return res.status(401).send('Invalid token');
+  //   }
+
+    //Else API has been authenticated. Proceed.
+    req.user = {};
+    req.eId = 'anonymous'+ new Date().toString();
+    // console.log(response);
+    next();
+
+  // });
+}
+
 validateToken = function(accessTokenFromClient, callback)
 {
   try
@@ -115,7 +143,9 @@ app.delete(OpsConfig.APIPaths.DELETE_OneJot, isAuthenticated, APIs.receiveAPIReq
 app.get(OpsConfig.APIPaths.GET_AllTags, isAuthenticated, APIs.receiveAPIRequest);
 app.get(OpsConfig.APIPaths.GET_TagSections, isAuthenticated, APIs.receiveAPIRequest);
 
-
+app.get(OpsConfig.APIPaths.GET_ANONYMOUS_AllJots, isNotAuthenticated, APIs.receiveAPIRequest);
+app.get(OpsConfig.APIPaths.GET_ANONYMOUS_OneJotsSections, isNotAuthenticated, APIs.receiveAPIRequest);
+app.get(OpsConfig.APIPaths.GET_ANONYMOUS_OneJot, isNotAuthenticated, APIs.receiveAPIRequest);
 //HTTP SERVER
 var server = http.createServer(app);
 
@@ -142,7 +172,7 @@ emitToConnections = function(connections, fromSocketId, eventType, data)
   for (var id in connections) 
   {
     var connection = connections[id];
-    if (connection.socketId!=fromSocketId)
+    if (connection && connection.socketId!=fromSocketId)
     {
       if (connectionExists(connection.socketId)==false)
       {

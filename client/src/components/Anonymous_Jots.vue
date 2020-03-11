@@ -7,11 +7,6 @@
     {{loadingMessage}} <font-awesome-icon size="lg" icon="spinner" class="fa-spin" />
   </span>
   <span v-if="isLoaded===true">
-    <div class="float-right">
-      <b-button variant="outline-primary text" size="sm" @click="createJot()" >
-        <font-awesome-icon size="sm" class="mr-2" icon="edit"/>New Jot
-      </b-button>       
-    </div> 
     <br><br>
     <div v-for="(jot, index) in jotsList" class="jotRecord" @click="openJot(jot)">
       <h5 class="title mb-n1">
@@ -36,7 +31,7 @@ import moment from 'moment';
 
 export default 
 {
-  name: 'Jots',
+  name: 'Anonymous_Jots',
   props: {
   },
   components: 
@@ -68,7 +63,7 @@ export default
   },  
   async mounted()
   {
-    Comms.wsEmit(this.$socket, Common.WSTypes.Connect, { }); 
+    // Comms.wsEmit(this.$socket, Common.WSTypes.Connect, { }); 
     // Comms.wsEmit(this.$socket, Common.WSTypes.NoJot, { });    
     this.$store.commit('clearStoredData');
     var response = await this.loadJots();
@@ -94,15 +89,16 @@ export default
     },
     openJot(jot)
     { 
-      this.$router.push({name:'jotsById',  params: { jotId: jot.documentId } });
+      this.$router.push({name:'anonymousJotsById',  params: { jotId: jot.documentId } });
     },
     async loadJots()
     {
       var loadError=null;
       // await this.$store.dispatch('loadJots');
-      var url = Common.URLS.Documents;
-      var item = await Comms.get(url).catch((error) => 
+      var url = Common.URLS.Documents_Anonymous;
+      var item = await Comms.anonymousGet(url).catch((error) => 
       { 
+        console.log(error);
         loadError = error;
       });
 
@@ -126,20 +122,6 @@ export default
     ///////////////////////////////
     // OPERATIONS
     ///////////////////////////////   
-    async createJot()
-    {
-      var url = Common.URLS.CreateJot;
-      var newJot = await Comms.post(url, {});
-
-      if (newJot)
-      {
-        this.openJot(newJot);
-      }
-      else
-      {
-        console.log(error);
-      }
-    },
     compare(a,b) 
     {
       if (a[this.compareAttribute] < b[this.compareAttribute])

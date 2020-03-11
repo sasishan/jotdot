@@ -11,11 +11,13 @@
         <JotsMenu 
           @toggle-tags="toggleTags()"
           @toggle-print="togglePrint()"
-          @delete-jot="showDeleteJotConfirm()"/>     
+          @delete-jot="showDeleteJotConfirm()"
+          v-if="isSignedIn"
+          />     
       </div>  
     </span>  
     <span v-if="isLoaded===true && showTags==false"> 
-      <Notes_Breadcrumb :sectionsStack="breadCrumbs" :jot="getJot" :allowEdit=allowEdit class="mt-3"/>
+      <Notes_Breadcrumb :sectionsStack="breadCrumbs" :jot="getJot" :allowEdit=allowEdit class="mt-3"/>      
       <transition name="slide-fade" mode="out-in" >
         <h4 v-if="isSwitched==true" :contenteditable=false v-html="currentMainSection.text" class="mt-2"></h4>
         <h4 v-if="isSwitched==false && currentMainSection.sectionId=='-1'" :contenteditable=allowEdit v-html="getJot.title" class="mt-2" @blur="jotTitleMonitor"></h4>      
@@ -44,6 +46,7 @@
             @save-section="saveSections"
             @backspace-begin-section="backspaceAtBegin"
             @enter-key-pressed="processEnterKey"
+            @section-formatted=""
             />
           </template>
       </draggable>
@@ -67,24 +70,16 @@
         <b-form-input v-model="confirmDeleteText"></b-form-input>      
       </b-modal>
     </div>    
-    <div class="col d-xl-none d-lg-none navbottom" v-if="currentFocusedSection.id">
-      <b-navbar type="dark" variant="light" fixed="bottom" >
-        <b-collapse id="nav-collapse" is-nav>
-          <b-navbar-nav>
-            <b-nav-item >
-              <b-button variant="default" size="sm" @mousedown="moveSectionBackwards(currentFocusedSection)" >
-                |<font-awesome-icon size="lg" icon="arrow-left" /> Shift Left
-              </b-button>
-            </b-nav-item>
-            <b-nav-item>
-              <b-button variant="default" size="sm" @mousedown="moveSectionForwards(currentFocusedSection)" >
-                Shift Right <font-awesome-icon size="lg" icon="arrow-right" />| 
-              </b-button>
-            </b-nav-item>
-          </b-navbar-nav>
-        </b-collapse>
-      </b-navbar>
-    </div>      
+    <MobileMenu v-if="showMobileMenu()"
+      @shiftLeft="shift(currentFocusedSection, 'shiftLeft')"
+      @shiftRight="shift(currentFocusedSection, 'shiftRight')"
+      @shiftUp = "shift(currentFocusedSection, 'shiftUp')"
+      @shiftDown ="shift(currentFocusedSection, 'shiftDown')"
+      @strikeThrough="formatSectionText(currentFocusedSection, 'strikeThrough')"
+      @focusLastSection="focusLastSection()"
+      :position="getMobileMenuPosition()"
+      />
+      
   </span>
 </template>
 
@@ -103,7 +98,9 @@ import OpsConfig from '../OperationsConfig.js';
 import Common from '../Common.js';
 import TextFormatter from '../TextFormatter.js';
 import JotsMenu from '../components/Jots_Menu.vue';
+import MobileMenu from '../components/MobileMenu.vue';
 import { uuid } from 'vue-uuid';
+// import {showAt, hideAt} from 'vue-breakpoints';
 
 
 export default 
@@ -142,7 +139,9 @@ export default
     draggable,
     NavMenu,
     Notes_Tags,
-    JotsMenu
+    JotsMenu,
+    MobileMenu
+
   },
   sockets: 
   {
@@ -150,6 +149,7 @@ export default
     {
       var sectionId = data.sectionId;
       var section = this.getSectionById([this.currentMainSection], sectionId, false);
+      
       section.lock.isLocked=true;
 
       // console.log('Locking SectionInFocus: ',section.text, section.lock.isLocked);
@@ -191,6 +191,10 @@ export default
   },
   computed: 
   {
+    isSignedIn()
+    {
+      return this.$store.state.signedIn;
+    },    
     haveDocWritePermissions()
     {
       var jot = this.$store.getters.getCurrentJot;
@@ -288,10 +292,84 @@ export default
   },    
   methods: 
   {
-    clickTest()
+    getMobileMenuPosition()
     {
-      console.log('test');
+      var width = window.innerWidth;
+      console.log(width);
+      if (width > Common.MobilePhoneWidthSize)
+      {
+        return "top";
+      }
+      else
+      {
+        return "bottom";
+      }
+      
     },
+    showMobileMenu()
+    {
+      if (this.isMobile())      
+      {
+        if (this.currentFocusedSection.id)
+        {
+          return true;
+        }
+        else
+        {
+          return false;
+        }        
+      }
+      else{
+        return false;
+      }
+
+    },
+    shift(section, direction)
+    {
+      this.$eventHub.$emit(direction, section.id);
+      // if (direction==Common.ShiftLeftEvent)
+      // {
+      //   this.$eventHub.$emit(Common.ShiftLeftEvent, section.id);
+      // }
+      // else if (direction==Common.ShiftRightEvent)
+      // {
+      //   this.$eventHub.$emit(Common.ShiftRightEvent, section.id);
+      // }
+      // else if (direction==Common.ShiftUpEvent)
+      // {
+      //   this.$eventHub.$emit(Common.ShiftUpEvent, section.id);
+      // }
+      // else if (direction==Common.ShiftDownEvent)
+      // {
+      //   this.$eventHub.$emit(Common.ShiftDownEvent, section.id);
+      // }
+    },
+    formatSectionText(section, type)
+    {
+
+      if (type==Common.StrikeThroughEvent)
+      {      
+        this.$eventHub.$emit(Common.StrikeThroughEvent, section.id);
+        
+      }    
+    },
+    focusLastSection()
+    {
+      console.log('focus');
+      var element = document.getElementById(this.lastSectionInFocus.id);  
+      element.focus();
+    },
+    // shiftLeft(section)
+    // {
+    //   // Where you wanna call the child's method:
+    //   // bus.$emit('shiftLeft', section.id);
+    //   this.$eventHub.$emit(Common.ShiftLeftEvent, section.id);
+    // },
+    // shiftRight(section)
+    // {
+    //   // bus.$emit('shiftRight', section.id);
+    //   this.$eventHub.$emit(Common.ShiftRightEvent, section.id);
+    // },
     backspaceAtBegin(event, section)
     {
       var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
@@ -421,7 +499,7 @@ export default
       })
         .then(value => 
         {
-          Common.GoToJots(this.$router);
+          Common.GoToJots(this.$router, this.isSignedIn);
         })
         .catch(error => {
           // An error occurred
@@ -437,7 +515,6 @@ export default
     ////////////////////////////////
     async initializeStartingJotId()
     {
-      
       var jotId=null;
       //check if a jot id is passed in as a prop
       if (this.initialJotId!=null)
@@ -457,7 +534,10 @@ export default
           this.$store.commit('setCurrentJotId', jotId);
           await this.$store.dispatch('getOneJotsPermissions', jotId);
 
-          Comms.wsEmit(this.$socket, Common.WSTypes.SetActiveJot, {'jotId': jotId });    
+          if (this.isSignedIn)
+          {
+            Comms.wsEmit(this.$socket, Common.WSTypes.SetActiveJot, {'jotId': jotId });      
+          }
         }        
       }
       else
@@ -932,10 +1012,13 @@ export default
     },
     startAutoSave(timeInMS)
     {
-      window.setInterval(() => 
+      if (this.isSignedIn)
       {
-        this.saveSections()
-      }, timeInMS);
+        window.setInterval(() => 
+        {
+          this.saveSections()
+        }, timeInMS);        
+      }
     },
     ////////////////////////////////
     // Key Monitoring
@@ -952,7 +1035,7 @@ export default
       {
         this.moveSectionBackwards(section);
       }
-      else if (event.key=='Tab')
+      else if (eventType==Common.KeyEventTypes.Tab)
       {
         this.moveSectionForwards(section);
       }
@@ -967,7 +1050,15 @@ export default
       else if (eventType==Common.KeyEventTypes.Up)
       {
         this.changeFocusUp(section);
-      }            
+      }         
+      else if (eventType==Common.KeyEventTypes.ShiftDown)
+      {
+        this.moveSectionDownwards(section);
+      }
+      else if (eventType==Common.KeyEventTypes.ShiftUp)
+      {
+        this.moveSectionUpwards(section);
+      }          
     },
     processEnterKey(event, section, textContent, innerHTML)
     {
@@ -1065,7 +1156,6 @@ export default
       }
       else if (this.currentFocusedSectionDepth==0)
       {
-        console.log('4');
       
         // newSection = this.addSection(this.currentSelection, this.currentMainSection, index+1);
         toSection=this.currentMainSection.sections;
@@ -1164,6 +1254,64 @@ export default
       });        
 
     },    
+    moveSectionDownwards(section)
+    {
+      if (!section)
+      { 
+        return
+      }
+      var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
+      var belowSection = this.getNextSection(parentSection, section);
+      var belowSectionIndex=null;
+      if (belowSection)
+      {
+        belowSectionIndex = this.getSectionIndexById(parentSection.sections, belowSection.id);  
+      }
+      
+
+      if (!belowSection || parentSection.id==belowSection.id)
+      {
+        return;
+      }
+      else
+      {
+        Operations.moveSectionOps(this.$store, section, parentSection, parentSection, belowSectionIndex);
+
+        Common.sleep(Common.DefaultDebounceInMS).then(() => 
+        {
+          document.getElementById(section.id).focus();
+        });                
+      }
+    },      
+    moveSectionUpwards(section)
+    {
+      if (!section)
+      { 
+        return
+      }
+      var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
+      var priorSection = this.getPriorSectionInSameParent(parentSection, section);
+      var priorSectionIndex=null;
+      if (priorSection)
+      {
+        priorSectionIndex = this.getSectionIndexById(parentSection.sections, priorSection.id);  
+      }
+      
+
+      if (!priorSection || parentSection.id==priorSection.id)
+      {
+        return;
+      }
+      else
+      {
+        Operations.moveSectionOps(this.$store, section, parentSection, parentSection, priorSectionIndex);
+
+        Common.sleep(Common.DefaultDebounceInMS).then(() => 
+        {
+          document.getElementById(section.id).focus();
+        });                
+      }
+    },     
     moveSectionForwards(section)
     {
       if (!section)
@@ -1173,7 +1321,7 @@ export default
       var parentSection = this.getSectionById([this.currentMainSection], section.parentSection, false);
       var priorSection = this.getPriorSectionInSameParent(parentSection, section);
 
-      if (parentSection.id==priorSection.id)
+      if (!priorSection || parentSection.id==priorSection.id)
       {
         return;
       }
@@ -1181,7 +1329,7 @@ export default
       {
         Operations.moveSectionOps(this.$store, section, parentSection, priorSection);
 
-        Common.sleep(5).then(() => 
+        Common.sleep(Common.DefaultDebounceInMS).then(() => 
         {
           document.getElementById(section.id).focus();
         });                
@@ -1195,13 +1343,17 @@ export default
       }
       var fromParent = this.getSectionById([this.currentMainSection], section.parentSection, false);          
       var toParent = this.getSectionById([this.currentMainSection], fromParent.parentSection, false); 
+      if (!toParent)
+      {
+        return;
+      }
       var fromParentIndex = this.getSectionIndexById(toParent.sections, fromParent.id);
       if (fromParent!=undefined && toParent!=undefined)
       {
         // console.log( toParent, fromParent, (fromParentIndex+1));
         Operations.moveSectionOps(this.$store, section, fromParent, toParent, (fromParentIndex+1));
 
-        Common.sleep(5).then(() => 
+        Common.sleep(Common.DefaultDebounceInMS).then(() => 
         {
           document.getElementById(section.id).focus();
         });          
@@ -1218,7 +1370,7 @@ export default
 
         //move to end of last section
         var element = document.getElementById(priorSection.id);
-        Common.sleep(5).then(() => 
+        Common.sleep(Common.DefaultDebounceInMS).then(() => 
         {
           Common.setEndOfContenteditable(element); 
         });        
