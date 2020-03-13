@@ -23,7 +23,7 @@ export const store = new Vuex.Store({
 		//Cognito Signin
 		cognitoInfo:{},
 		currentJot:  { documentId: '-1'},
-		signedIn: false, 
+		signedIn: null, 
 		username: "Not Initialized",
 		isLoaded: false,
 		errorLoadingState: false,
@@ -181,6 +181,7 @@ export const store = new Vuex.Store({
 				var jot ={};
 				if (this.getters.getSignedInState==true)
 				{
+					console.log('getting getOneJotsPermissions')
 					jot = await Comms.get(url).catch((error) => 
 					{ 
 						// console.error(error); 
@@ -189,6 +190,7 @@ export const store = new Vuex.Store({
 				}
 				else
 				{
+					console.log('getting getOneJotsPermissions anon')
 					url = Common.URLS.OneJot_Anonymous + jotId;	
 					jot = await Comms.anonymousGet(url).catch((error) => 
 					{ 

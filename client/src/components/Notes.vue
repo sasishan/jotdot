@@ -100,6 +100,7 @@ import TextFormatter from '../TextFormatter.js';
 import JotsMenu from '../components/Jots_Menu.vue';
 import MobileMenu from '../components/MobileMenu.vue';
 import { uuid } from 'vue-uuid';
+import AuthHelper from '../AuthHelper.vue'
 // import {showAt, hideAt} from 'vue-breakpoints';
 
 
@@ -178,7 +179,12 @@ export default
   async mounted()
   {    
     // this.$store.commit('clearStoredData');
-    this.switched=!this.switched;
+    if (this.$store.state.signedIn === null) 
+    {
+      await AuthHelper.updateSignInStatus(this.$store);
+    }     
+    this.switched=!this.switched;   
+    console.log('Notes mounted', this.isSignedIn);
     await this.initializeStartingJotId();  
     this.intializePendingEventAlert();  
     await this.initializeBreadCrumbsAndLoadSections();  

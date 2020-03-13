@@ -266,8 +266,8 @@ export default
       }
       else
       {
-        // content= '<li> ' +this.section.html +'</li>'; 
-        content= '#### ' +this.section.html; 
+        content= '<t>- ' +this.section.html +'\n'; 
+        // content= '#### ' +this.section.html; 
       }
 
       // return content;

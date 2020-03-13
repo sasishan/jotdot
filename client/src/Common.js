@@ -213,7 +213,7 @@ Common.getJotPermissions=function(jot)
   {
     permissionsText+="read only";
   }
-  console.log(jot);
+  // console.log(jot);
   if (jot.permissions.isPublic && jot.permissions.isPublic==true)
   {
     permissionsText+=" public";
