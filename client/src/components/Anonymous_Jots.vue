@@ -7,6 +7,9 @@
     {{loadingMessage}} <font-awesome-icon size="lg" icon="spinner" class="fa-spin" />
   </span>
   <span v-if="isLoaded===true">
+    <span v-if="jotsList.length==0">
+      No Jots are published publicly
+    </span>  
     <br><br>
     <div v-for="(jot, index) in jotsList" class="jotRecord" @click="openJot(jot)">
       <h5 class="title mb-n1">

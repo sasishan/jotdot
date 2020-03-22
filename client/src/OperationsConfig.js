@@ -12,6 +12,7 @@ var priorId='priorId';
 var newPositionData = 'newPositionData';
 var tags = 'tags';
 var title='title';
+var isShared = 'isShared';
 
 OpsConfig.ValidOperationsTypes = 
 {
@@ -44,7 +45,8 @@ OpsConfig.ValidClientOperations=
     UpdateSectionText: 'updateSectionText',
     OpenCloseSection: 'openCloseSection', 
     DeleteSection: 'deleteBlankSection',
-    UpdateJotTitle: 'updateJotTitle'
+    UpdateJotTitle: 'updateJotTitle',
+    UpdateJotIsShared: 'updateJotIsShared'
 }
 
 //FIELDS STORED in DB
@@ -135,6 +137,14 @@ OpsConfig.UpdateJotTitleOperation=function(documentId, newTitle)
 
     this[OpsConfig.OperationFields.Data][title] = newTitle;        
 }
+
+OpsConfig.UpdateJotIsSharedOperation=function(documentId, sharedValue)
+{
+    OpsConfig.Operation.call(this, OpsConfig.ValidOperationsTypes.UpdateJot, documentId, null);
+
+    this[OpsConfig.OperationFields.Data][isShared] = sharedValue;        
+}
+
 
 OpsConfig.MoveOperation=
 {

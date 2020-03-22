@@ -15,6 +15,10 @@ import sanitizeHTML from 'sanitize-html';
 import io from 'socket.io-client';
 import VueSocketIO from 'vue-socket.io';
 import Common from './Common.js';
+import VueClipboard from 'vue-clipboard2'
+ 
+VueClipboard.config.autoSetContainer = true; // add this line
+Vue.use(VueClipboard);
 // import Vue2TouchEvents from 'vue2-touch-events';
 
 

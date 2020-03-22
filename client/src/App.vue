@@ -27,9 +27,9 @@ export default
   },
   async beforeCreate() 
   {
-    console.log('beforeCreate app');
+    // console.log('beforeCreate app');
     await AuthHelper.updateSignInStatus(this.$store);
-    console.log('beforeCreate updateSignInStatus');
+    // console.log('beforeCreate updateSignInStatus');
     if (this.$store.state.signedIn === false) 
     {
       Common.GoToJots(this.$router, this.$store.state.signedIn);

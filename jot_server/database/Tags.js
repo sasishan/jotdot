@@ -147,57 +147,57 @@ exports.Operation_updateJot = function(db, eId, data, callback)
 // 	return jotRecord;
 // }
 
-getJotUpdateQuery = function(data)
-{
-	var setupValues=[];
+// getJotUpdateQuery = function(data)
+// {
+// 	var setupValues=[];
 
-	var title = Helpers.getField(data, OpsConfig.JotFields.Title, []);
+// 	var title = Helpers.getField(data, OpsConfig.JotFields.Title, []);
 
-	if (!title.isValid())
-	{
-		return null;
-	}
-	var setStatement = { };
-	if (title.isValid())
-	{
-		setStatement = { title: title.getValue()};
-	}
+// 	if (!title.isValid())
+// 	{
+// 		return null;
+// 	}
+// 	var setStatement = { };
+// 	if (title.isValid())
+// 	{
+// 		setStatement = { title: title.getValue()};
+// 	}
 
-	return setStatement;
-}
+// 	return setStatement;
+// }
 
-permitted_updateJot=function(db, documentId, data, callback)
-{
-	if (!documentId || !data || !db)
-	{
-		var error = Helpers.logError('Internal error with query.', Helpers.INTERNAL_ERROR);
-		return callback(error, null);
-	}
+// permitted_updateJot=function(db, documentId, data, callback)
+// {
+// 	if (!documentId || !data || !db)
+// 	{
+// 		var error = Helpers.logError('Internal error with query.', Helpers.INTERNAL_ERROR);
+// 		return callback(error, null);
+// 	}
 
-	var updateQuery = getJotUpdateQuery(data);
+// 	var updateQuery = getJotUpdateQuery(data);
 
-	if ( updateQuery!=null )
-	{			
-		var findQuery = { [OpsConfig.JotFields.DocumentId]: documentId };
+// 	if ( updateQuery!=null )
+// 	{			
+// 		var findQuery = { [OpsConfig.JotFields.DocumentId]: documentId };
 
-		Database.SetFieldQuery(db, Database.Tables.Documents, findQuery, updateQuery, null, 
-			function(error, results)
-			{
-				if (error)
-				{
-					var error = Helpers.logError('Could not update', Helpers.INTERNAL_ERROR);
-					return callback(error, null);
-				}
+// 		Database.SetFieldQuery(db, Database.Tables.Documents, findQuery, updateQuery, null, 
+// 			function(error, results)
+// 			{
+// 				if (error)
+// 				{
+// 					var error = Helpers.logError('Could not update', Helpers.INTERNAL_ERROR);
+// 					return callback(error, null);
+// 				}
 				
-				return callback(null, results);
-			});
-	}	
-	else
-	{
-		var error = Helpers.logError('Internal error with query.', Helpers.INTERNAL_ERROR);
-		return callback(error, null);
-	}		
-}
+// 				return callback(null, results);
+// 			});
+// 	}	
+// 	else
+// 	{
+// 		var error = Helpers.logError('Internal error with query.', Helpers.INTERNAL_ERROR);
+// 		return callback(error, null);
+// 	}		
+// }
 
 exports.permitted_getJotRecord = function(db, eId, documentId, callback)
 {

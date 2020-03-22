@@ -190,8 +190,9 @@ export const store = new Vuex.Store({
 				}
 				else
 				{
-					console.log('getting getOneJotsPermissions anon')
+					console.log('getting getOneJotsPermissions anon');
 					url = Common.URLS.OneJot_Anonymous + jotId;	
+					console.log('anon get', url);
 					jot = await Comms.anonymousGet(url).catch((error) => 
 					{ 
 						return {error: error, jot: null};

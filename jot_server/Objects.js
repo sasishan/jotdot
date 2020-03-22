@@ -38,6 +38,7 @@ Objects.Permissions = function()
   this.write={};
   this.append={};
   this.isPublic=false;
+  this.isShared = false;
   this.ownerEID=undefined;
 
   this.setDocumentPermissions = function(docRecord)
@@ -68,6 +69,16 @@ Objects.Permissions = function()
     {
       this.isPublic=false;
     }
+
+    if (docRecord.isShared!=null && docRecord.isShared!=undefined)
+    {
+      this.isShared=docRecord.isShared;
+    }
+    else
+    {
+      this.isShared=false;
+    }    
+    
   };
 
   this.setOwner = function(eId)
@@ -95,6 +106,11 @@ Objects.Permissions = function()
     {
       return false;
     }
+  };
+
+  this.isShareable = function()
+  {
+    return this.isShared;  
   };
 
   this.isPublicAccessible = function()

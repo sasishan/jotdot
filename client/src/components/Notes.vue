@@ -1,5 +1,11 @@
 <template>
+  
   <span>  
+    <title>{{title}}</title>
+    <meta name="description" content="Jot Dot, organize your thoughts and ideas!" />
+    <meta property="og:title" :content="title" />
+    <meta property="og:url" content="https://jotdot.honchohq.com/" />
+    <meta property="og:description" content="Jot Dot, organize your thoughts and ideas!"/>
     <span v-if="errorOccurred===true">
       <h6 class="text-danger mt-5">{{error}}</h6>
     </span>
@@ -8,12 +14,20 @@
     </span>
     <span v-if="isLoaded===true">
       <div class="float-right">
-        <JotsMenu 
-          @toggle-tags="toggleTags()"
-          @toggle-print="togglePrint()"
-          @delete-jot="showDeleteJotConfirm()"
-          v-if="isSignedIn"
-          />     
+        <div class="row">
+          <ShareMenu 
+            v-if="isSignedIn"
+            class="mr-2"
+            :jot="getJot"
+            @toggle-shareable="jotShareableToggle"
+            />         
+          <JotsMenu 
+            @toggle-tags="toggleTags()"
+            @toggle-print="togglePrint()"
+            @delete-jot="showDeleteJotConfirm()"
+            v-if="isSignedIn"
+            />
+          </div>     
       </div>  
     </span>  
     <span v-if="isLoaded===true && showTags==false"> 
@@ -98,6 +112,7 @@ import OpsConfig from '../OperationsConfig.js';
 import Common from '../Common.js';
 import TextFormatter from '../TextFormatter.js';
 import JotsMenu from '../components/Jots_Menu.vue';
+import ShareMenu from '../components/Share_Menu.vue'
 import MobileMenu from '../components/MobileMenu.vue';
 import { uuid } from 'vue-uuid';
 import AuthHelper from '../AuthHelper.vue'
@@ -125,7 +140,8 @@ export default
       currentSectionId:null,
       error:"",
       confirmDeleteText:"",
-      lastSectionInFocus:{}
+      lastSectionInFocus:{},
+      title: "Jot Dot"
     }
   },  
   props: {
@@ -141,7 +157,8 @@ export default
     NavMenu,
     Notes_Tags,
     JotsMenu,
-    MobileMenu
+    MobileMenu,
+    ShareMenu
 
   },
   sockets: 
@@ -184,11 +201,11 @@ export default
       await AuthHelper.updateSignInStatus(this.$store);
     }     
     this.switched=!this.switched;   
-    console.log('Notes mounted', this.isSignedIn);
     await this.initializeStartingJotId();  
     this.intializePendingEventAlert();  
     await this.initializeBreadCrumbsAndLoadSections();  
-    this.initializeStartingSectionsList();    
+    this.initializeStartingSectionsList(); 
+    this.setHTMLTitle();
   },
   destroyed()
   {
@@ -298,6 +315,10 @@ export default
   },    
   methods: 
   {
+    setHTMLTitle()
+    {
+      this.title = this.$store.getters.getCurrentJot.title + (this.currentMainSection.text!='' ? ' : ' +this.currentMainSection.text : '');
+    },
     getMobileMenuPosition()
     {
       var width = window.innerWidth;
@@ -641,7 +662,8 @@ export default
         sectionId = this.$route.params.sectionId;
       }
       return sectionId;
-    },    
+    }, 
+
     getJotIdFromRoute()
     {
       var jotId=undefined;
@@ -1035,6 +1057,12 @@ export default
       this.getJot.title = title;
       Operations.jotTitleChangeOp(this.$store, title);
     },
+    jotShareableToggle(isShared)
+    {
+      var isShared = isShared;
+      this.getJot.isShared = isShared;
+      Operations.jotShareableChangeOp(this.$store, isShared);
+    },    
     keyDownMonitor(event, eventType, section)
     {
       if (eventType==Common.KeyEventTypes.ShiftTab)

@@ -28,7 +28,9 @@ OpsConfig.JotFields=
     EmployeeId: 'eId',
     OrgId: 'orgId',
     DocumentId: 'documentId',
-    Title: 'title'
+    Title: 'title',
+    isShared: 'isShared', 
+    isPublic: 'isPublic'
 };
 
 
@@ -88,7 +90,7 @@ OpsConfig.APIPaths=
     GET_ANONYMOUS_OneJot: '/api/v1/anonymous/jots/:'+ OpsConfig.APIPath_JotId,
 };
 
-OpsConfig.GET_AllDocuments_Projection= { projection: {documentId: 1, title: 1, permissions: 1, eId: 1 , created:1, lastUpdated:1, _id: 0}};
+OpsConfig.GET_AllDocuments_Projection= { projection: {documentId: 1, title: 1, permissions: 1, eId: 1 , created:1, isPublic:1, isShared:1, lastUpdated:1, _id: 0}};
 OpsConfig.GET_Sections_Projection= { projection: {documentId: 1, text: 1, permissions: 1, eId: 1 , _id: 0}};
 
 module.exports = OpsConfig;

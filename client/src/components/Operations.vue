@@ -46,6 +46,10 @@ export default
 		{
 			op = new OpsConfig.UpdateJotTitleOperation(docId, item.newTitle);
 		}
+		else if (item.type==OpsConfig.ValidClientOperations.UpdateJotIsShared)
+		{
+			op = new OpsConfig.UpdateJotIsSharedOperation(docId, item.isShared);
+		}		
 		else if (item.type==OpsConfig.ValidClientOperations.NoOp)
 		{
 			op = new OpsConfig.NoOp();
@@ -119,6 +123,22 @@ export default
 			console.log(e);
 		}		
 	},
+	jotShareableChangeOp(store, sharedValue)
+	{
+		try
+		{
+			var operation = {
+					type: OpsConfig.ValidClientOperations.UpdateJotIsShared, 
+					isShared: sharedValue
+				};
+
+			this.queueOperation(store, operation);
+		}
+		catch (e)
+		{
+			console.log(e);
+		}
+	},	
 	jotTitleChangeOp(store, newTitle)
 	{
 		try

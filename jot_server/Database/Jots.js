@@ -113,7 +113,7 @@ exports.getRequiredPermissions = function(eId, jotRecord)
 	var requireWritePermissions = false;
 	//check if this Jot is publicly shared
 	// var requiredPermissions = new Objects.RequiredPermissions(eId, requireRead, requireWrite);
-	if (permissions.isPublicAccessible())
+	if (permissions.isPublicAccessible() || permissions.isShareable())
 	{
 		var requireReadPermissions = false; // if public accessible they can read it
 		// var requireWritePermissions = true; //but cant write it
@@ -246,11 +246,14 @@ parseJotRecord = function(eId, jotRecord)
 		var canWrite = permissions.canWrite(eId);
 		var isOwner = permissions.isOwner(eId);
 		var isPublic = permissions.isPublicAccessible();
+
+		var isShared = permissions.isShareable();
 		var eIdPermissions = {
 			read: canRead, 
 			write: canWrite,
 			isOwner: isOwner,
-			isPublic: isPublic
+			isPublic: isPublic, 
+			isShared: isShared
 		};
 
 		jotRecord.permissions=eIdPermissions;		
@@ -264,15 +267,27 @@ getJotUpdateQuery = function(data)
 	var setupValues=[];
 
 	var title = Helpers.getField(data, OpsConfig.JotFields.Title, []);
+	var isShared = Helpers.getField(data, OpsConfig.JotFields.isShared, []);
 
-	if (!title.isValid())
-	{
-		return null;
-	}
+	// if (!title.isValid())
+	// {
+	// 	return null;
+	// }
+
+	// if (!isShared.isValid())
+	// {
+	// 	return null;
+	// }	
 	var setStatement = { };
 	if (title.isValid())
 	{
-		setStatement = { title: title.getValue()};
+		setStatement.title = title.getValue();
+	}
+
+	if (isShared.isValid())
+	{
+		// setStatement.permissions={};
+		setStatement.isShared = isShared.getValue();
 	}
 
 	return setStatement;
@@ -282,7 +297,7 @@ permitted_updateJot=function(db, documentId, data, callback)
 {
 	if (!documentId || !data || !db)
 	{
-		var error = Helpers.logError('Internal error with query.', Helpers.INTERNAL_ERROR);
+		var error = Helpers.logError('permitted_updateJot: Missing values - Internal error with query', Helpers.INTERNAL_ERROR);
 		return callback(error, null);
 	}
 
@@ -306,7 +321,8 @@ permitted_updateJot=function(db, documentId, data, callback)
 	}	
 	else
 	{
-		var error = Helpers.logError('Internal error with query.', Helpers.INTERNAL_ERROR);
+		console.log('permitted_updateJot',data);
+		var error = Helpers.logError('permitted_updateJot: Internal error with query.', Helpers.INTERNAL_ERROR);
 		return callback(error, null);
 	}		
 }
@@ -388,7 +404,7 @@ exports.getAllReadableJots = function(db, eId, callback)
 	{
 		'$or' : [ 
 				{ [OpsConfig.SectionFields.EmployeeId]: eId }, 
-				{ [OpsConfig.Permissions_Read]: { $in: [eId] }} , 
+				{ [OpsConfig.Permissions_Read]: { $in: [eId] }}, 
 				{ [OpsConfig.Permissions_IsPublic]: true }
 			]
 	};

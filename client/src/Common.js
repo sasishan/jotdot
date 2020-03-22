@@ -1,8 +1,11 @@
 var Common={};
 
 
-var urlBase = 'http://localhost:3020';
-// var urlBase = 'https://jotdotserver.honchohq.com';
+// var vueUrlBase = 'http://localhost:8080';
+var vueUrlBase = 'https://jotdot.honchohq.com';
+
+// var urlBase = 'http://localhost:3020';
+var urlBase = 'https://jotdotserver.honchohq.com';
 
 Common.AppName = "JotDot";
 
@@ -20,6 +23,7 @@ Common.TagContentClass="tagContent";
 Common.HashTagTextClass="hashTagText";
 Common.TagContentNubClass = "tagContentEnd";
 Common.PersonTag = '@';
+
 
 Common.MobilePhoneWidthSize = 740;
 Common.DesktopWidthSize = 1200;
@@ -60,6 +64,7 @@ Common.ConfirmDeleteStatement='deleteme';
 Common.Messages = 
 {
     PendingSaves: 'There is pending saves. Are you sure you want to leave?',
+    ShareText: 'Share',
     PrintMode: "Print Mode",
     EditMode: "Edit Mode",
     Saved: 'saved',
@@ -76,7 +81,9 @@ Common.Messages =
     DeleteJotConfirmMessage: 'Jot was deleted successfully',
     ConfirmDeleteModalText: "<p>This option deletes this Jot record including all sections. Only the Jot owner " +
       "can delete a complete Jot. There is no going back once deleted.</p>"+
-      "</p>Please type in <b>'"+Common.ConfirmDeleteStatement+"'</b> to confirm you want to delete this Jot, or click to cancel this action.</p>"
+      "</p>Please type in <b>'"+Common.ConfirmDeleteStatement+"'</b> to confirm you want to delete this Jot, or click to cancel this action.</p>",
+      ShareCancelledMessage:'Share was cancelled',
+
 }
 
 Common.URLS = 
@@ -124,6 +131,11 @@ Common.KeyEventTypes=
 Common.DragEvent_Added='added';
 Common.DragEvent_Move='moved';
 
+Common.GetJotLink = function(jotId)
+{
+  var url = vueUrlBase + '/#/anonymous/jots/'+jotId;
+  return url;
+}
 Common.GoToSection = function(documentId, sectionId, router, isSignedIn)
 {
   if (isSignedIn)
@@ -214,10 +226,15 @@ Common.getJotPermissions=function(jot)
     permissionsText+="read only";
   }
   // console.log(jot);
-  if (jot.permissions.isPublic && jot.permissions.isPublic==true)
+  if (jot.permissions.isPublic!=undefined && jot.permissions.isPublic!=null && jot.permissions.isPublic==true)
   {
     permissionsText+=" public";
   }
+
+  if (jot.permissions.isShared!=undefined && jot.permissions.isShared!=null && jot.permissions.isShared==true)
+  {
+    permissionsText+=" link sharing";
+  }  
   return permissionsText;
 };
 

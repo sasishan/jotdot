@@ -265,8 +265,9 @@ export default
         }
       }
       else
-      {
-        content= '<t>- ' +this.section.html +'\n'; 
+      { 
+
+        content= '- ' +this.section.html +'\n'; 
         // content= '#### ' +this.section.html; 
       }
 
