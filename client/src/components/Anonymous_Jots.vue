@@ -8,7 +8,7 @@
   </span>
   <span v-if="isLoaded===true">
     <span v-if="jotsList.length==0">
-      No Jots are published publicly
+      No Jots are currently available publicly
     </span>  
     <br><br>
     <div v-for="(jot, index) in jotsList" class="jotRecord" @click="openJot(jot)">

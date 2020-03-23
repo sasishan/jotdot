@@ -188,7 +188,7 @@ export default
         var section = this.getSectionById([this.currentMainSection], sectionId, false);        
         section.html = data.html;
         section.text = data.text;
-        console.log('updateSection', sectionId);
+        // console.log('updateSection', sectionId);
       }
 
     },    
@@ -196,6 +196,7 @@ export default
   async mounted()
   {    
     // this.$store.commit('clearStoredData');
+    console.log('0');
     if (this.$store.state.signedIn === null) 
     {
       await AuthHelper.updateSignInStatus(this.$store);
@@ -317,7 +318,15 @@ export default
   {
     setHTMLTitle()
     {
-      this.title = this.$store.getters.getCurrentJot.title + (this.currentMainSection.text!='' ? ' : ' +this.currentMainSection.text : '');
+      if (this.$store.getters.getCurrentJot)
+      {
+        this.title = this.$store.getters.getCurrentJot.title + (this.currentMainSection.text!='' ? ' : ' +this.currentMainSection.text : '');  
+      }
+      else
+      {
+        this.title="";
+      }
+      
     },
     getMobileMenuPosition()
     {
