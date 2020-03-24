@@ -9,21 +9,11 @@ config.COGNITO_CONFIG =
     tokenExpiration: 3600000 //Up to default expiration of 1 hour (3600000 ms)
 };
 
-// config.AWS_COGNITO_CONFIG =
-// {
-//     region: 'us-west-2',
-//     userPoolId: 'us-west-2_r1pPxWnDM',
-//     tokenUse: ['id', 'access'], //Possible Values: access | id
-//     audience: ['55plsi2cl0o267lfusmgaf67pf']
-// };
+
 
 config.S3_CONFIG =
 {
-    bucket: 'wawesome1',
-    awsConfig: {
-	  accessKeyId: 'AKIAXIOG6S6QMGOPPFFR',
-	  secretAccessKey: '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',
-	}
+
 };
 
 module.exports = config;
