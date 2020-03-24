@@ -13,6 +13,7 @@ const routes = [
     { name: 'anonymousJots', path: '/anonymous', component: AnonymousJots},
     { name: 'anonymousJotsById', path: '/anonymous/jots/:jotId', component: Notes, meta: { requiresAuth: false }},
     { name: 'anonymousSectionsById', path: '/anonymous/jots/:jotId/:sectionId', component: Notes, meta: { requiresAuth: false }},
+    { name: 'home', path: '/', component: Jots, meta: { requiresAuth: false }},
     { name: 'home', path: '/home', component: Home, meta: { requiresAuth: false }},
     { name: 'about', path: '/about', component: About, meta: { requiresAuth: false }},
     { name: 'jots', path: '/jots', component: Jots, meta: { requiresAuth: true }},

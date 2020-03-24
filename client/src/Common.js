@@ -4,7 +4,7 @@ var Common={};
 // var vueUrlBase = 'http://localhost:8080';
 var vueUrlBase = 'https://jotdot.honchohq.com';
 
-var urlBase = 'http://localhost:3000';
+var urlBase = 'http://localhost:3020';
 // var urlBase = 'https://jotdotserver.honchohq.com';
 
 Common.AppName = "JotDot";
