@@ -266,8 +266,13 @@ export default
       }
       else
       { 
-
-        content= '- ' +this.section.html +'\n'; 
+        // content+='- ';
+        for (var i=0; i<(this.depth*2);i++)
+        {
+          content+= '&nbsp;';
+        }
+        content+= '+&nbsp;' + this.section.html +'\n';   
+        
         // content= '#### ' +this.section.html; 
       }
 
