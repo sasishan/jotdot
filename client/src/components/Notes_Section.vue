@@ -508,13 +508,21 @@ export default
               'a',
               'nl', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 
               'div',
-              'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe', 'span', 'table', 'a' ],          
+              'img',
+              'meta',
+              'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe', 'span', 'table', 'a' 
+            ],          
           // this.$sanitize.defaults.allowedTags.concat([ 'span', 'table', 'a']),
           allowedAttributes:
           {
             'span': ['contenteditable'], 
-            'a':['href']
+            'a':['href'],
+            'img':['src', 'alt'], 
+            'meta':['charset'],
           },
+          allowedSchemesByTag: {
+            img: [ 'data' ]
+          },          
           // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
           allowedClasses:{
             'span': [ 'hashTagText' ], 
@@ -553,13 +561,20 @@ export default
     pasteContent(event)
     {
       // console.log(event);
-      event.preventDefault();
-
+      event.preventDefault();  
+      // console.log(event.clipboardData.getData('text/html'));
       var content = this.getSanitized(event.clipboardData.getData('text/html'));
       if (!content)
       {
-        content = this.getSanitized(event.clipboardData.getData('text'));
+        content = this.getSanitized(event.clipboardData.getData('text'));        
+        // if (content!='<img />')
+        // {
+        //   event.preventDefault();
+        // }
+
       }
+
+
       // console.log('pasteContent', content, event.clipboardData.getData('text/html'));
       document.execCommand('insertHTML', false, content);
       // console.log('pasted: '+ event.clipboardData.getData('text/plain'));
