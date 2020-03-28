@@ -1,0 +1,9 @@
+.DS_Store
+backups/
+client/.DS_Store
+client/amplify/
+client/dist/
+client/node_modules/
+jot_server/.DS_Store
+jot_server/node_modules/
+package-lock.json

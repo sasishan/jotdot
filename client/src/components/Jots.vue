@@ -120,7 +120,7 @@ export default
     getJotPermissions(jot)
     {
       var permissionsText= Common.getJotPermissions(jot);
-
+      
       return permissionsText;
     },
     ///////////////////////////////
