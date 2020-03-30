@@ -28,6 +28,13 @@
           </b-input-group-append> 
         </b-input-group>
         <br>
+        <hr>
+        <b>Make Link Public</b>
+        <p>
+        {{getPublicLinkStatus()}}
+        </p>
+        <toggle-button v-model="publicLink" @change="publicToggle" />
+        <br>        
       </b-modal>
     </div>     
   </div-->
@@ -56,6 +63,7 @@ export default
       shareText: Common.Messages.ShareText,
       modalText: {},
       shareableLink: false,
+      publicLink: false,
       isPublic: false,
       // jotShareableLink: 
     }
@@ -63,6 +71,7 @@ export default
   mounted()
   {
     this.setShareableState();
+    // this.setPublicState();
   },
   computed: {
     isSignedIn()
@@ -79,15 +88,30 @@ export default
         this.shareableLink=true;
       }
     },
+    setPublicState()
+    {
+      if (this.jot && this.jot.isShared)
+      {
+        this.publicLink=true;
+      }
+    },    
     getJotShareableLink()
     {
       // console.log('getShareLink', this.jotId, Common.GetJotLink(this.jotId));
       return Common.GetJotLink(this.jot.documentId);
     },     
+    getPublicLinkState()
+    {
+      return publicLink;
+    },
     shareToggle()
     {
       this.$emit('toggle-shareable', this.shareableLink);
     },
+    publicToggle()
+    {
+      this.$emit('toggle-public', this.publicLink);
+    },    
     getShareableLinkStatus()
     {
       if (this.shareableLink)
@@ -99,6 +123,17 @@ export default
         return "Link sharing is off, so only members with permissions can access this document through its URL.";
       }
     },
+    getPublicLinkStatus()
+    {
+      if (this.publicLink)
+      {
+        return "Link is published to the PUBLIC.";
+      }
+      else
+      {
+        return "Link is NOT published to the public.";
+      }
+    },    
 
     //////////////////////////
     //Modals

@@ -486,6 +486,7 @@ export default
     },
     getSanitized(content)
     {
+      // console.log('getSanitized', content);
       var c= 
       this.$sanitize(content, 
         {
@@ -500,6 +501,17 @@ export default
             'h5':'b',
             'h6':'b',
             'div':'span',
+            'a': function(tagName, attribs) 
+            {
+              console.log('before', attribs);
+              attribs.contenteditable="false";
+              attribs.target="_blank";
+              console.log('after', attribs);
+              return {
+                  tagName:'a',
+                  attribs: attribs
+              }
+            }
           },
           allowedTags: 
             [ 
@@ -516,12 +528,12 @@ export default
           allowedAttributes:
           {
             'span': ['contenteditable'], 
-            'a':['href'],
+            'a':['href', 'contenteditable', 'target'],
             'img':['src', 'alt'], 
             'meta':['charset'],
           },
           allowedSchemesByTag: {
-            img: [ 'data' ]
+            img: [ 'data', 'http', 'https']
           },          
           // allowedAttributes: this.$sanitize.defaults.allowedAttributes.concat([ 'contentEditable']), 
           allowedClasses:{
@@ -530,6 +542,7 @@ export default
           },
         });  
 
+        // console.log('getSanitized - after', c);
         return c; 
     },    
     clickShowSectionMenu(event)

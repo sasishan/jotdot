@@ -33,6 +33,8 @@ import Common from '../Common.js';
 import Comms from '../components/Comms.vue';
 import Operations from './Operations.vue';
 import moment from 'moment';
+import AuthHelper from '../AuthHelper.vue';
+
 
 export default 
 {
@@ -66,6 +68,20 @@ export default
       return true;
     },    
   },  
+  async beforeCreate() 
+  {
+    // console.log('beforeCreate app');
+    await AuthHelper.updateSignInStatus(this.$store);
+    // console.log('beforeCreate updateSignInStatus');
+    if (this.$store.state.signedIn === false) 
+    {
+      Common.GoToJots(this.$router, this.$store.state.signedIn);
+    }
+    // else 
+    // {
+    //   // Common.GoToSignIn(this.$router);
+    // }    
+  },   
   async mounted()
   {
     Comms.wsEmit(this.$socket, Common.WSTypes.Connect, { }); 

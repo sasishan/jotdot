@@ -115,7 +115,7 @@ import JotsMenu from '../components/Jots_Menu.vue';
 import ShareMenu from '../components/Share_Menu.vue'
 import MobileMenu from '../components/MobileMenu.vue';
 import { uuid } from 'vue-uuid';
-import AuthHelper from '../AuthHelper.vue'
+import AuthHelper from '../AuthHelper.vue';
 // import {showAt, hideAt} from 'vue-breakpoints';
 
 

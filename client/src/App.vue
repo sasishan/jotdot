@@ -32,7 +32,7 @@ export default
     // console.log('beforeCreate updateSignInStatus');
     if (this.$store.state.signedIn === false) 
     {
-      Common.GoToJots(this.$router, this.$store.state.signedIn);
+      // Common.GoToJots(this.$router, this.$store.state.signedIn);
     }
     // else 
     // {
