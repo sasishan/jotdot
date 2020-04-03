@@ -3,7 +3,7 @@
     <b-row>
       <b-col cols="2">
         <b-button-group vertical>
-          <template v-for="(tag, index) in tagsList">
+          <template v-for="(tag, index) in getTagsList()">
             <b-button variant="outline-primary text" size="sm" @click="getOneTag(tag)">{{tag}}</b-button>
           </template>
         </b-button-group>    
@@ -16,8 +16,7 @@
             :section="section" 
             class="list-item"
             :offset="0"
-            :depth="0"
-            :searchText="searchText"
+            :depth="0"          
             @section-selected="sectionSelected(section)"
             />
       </b-col>
@@ -39,11 +38,11 @@ export default
       sectionsList:[],
       allowEdit: true,
       compareAttribute:'text', 
-      searchText: ''
     }
   },
   async mounted()
   {
+    Common.ClearSearch(this.$store);
     await this.loadTags();
   },
   components:
@@ -52,10 +51,37 @@ export default
   },  
   props: {
   },
-  computed: {
+  computed: 
+  {
+    searchText()
+    {
+      return this.$store.getters.getSearchText;
+    },    
   },  
   methods: 
   {
+    getTagsList()
+    {
+      var searchedTags=[];
+      var searchText= this.searchText;
+      if (!searchText || searchText.length==0)
+      {
+        return this.tagsList;
+      }
+
+
+      for (var i=0; i<this.tagsList.length; i++)
+      {
+        var tag = this.tagsList[i];
+
+        if (tag.toLowerCase().includes(searchText.toLowerCase()))
+        {
+          searchedTags.push(tag)
+        }
+      }      
+
+      return searchedTags;
+    },
     async loadTags()
     {
       var url = Common.URLS.GetTags;

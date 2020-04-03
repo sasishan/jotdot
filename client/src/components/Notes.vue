@@ -196,11 +196,12 @@ export default
   async mounted()
   {    
     // this.$store.commit('clearStoredData');
-    console.log('0');
+    
     if (this.$store.state.signedIn === null) 
     {
       await AuthHelper.updateSignInStatus(this.$store);
     }     
+    Common.ClearSearch(this.$store);
     this.switched=!this.switched;   
     await this.initializeStartingJotId();  
     this.intializePendingEventAlert();  

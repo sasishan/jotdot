@@ -503,10 +503,8 @@ export default
             'div':'span',
             'a': function(tagName, attribs) 
             {
-              console.log('before', attribs);
               attribs.contenteditable="false";
               attribs.target="_blank";
-              console.log('after', attribs);
               return {
                   tagName:'a',
                   attribs: attribs

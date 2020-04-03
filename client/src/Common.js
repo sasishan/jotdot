@@ -29,7 +29,7 @@ Common.MobilePhoneWidthSize = 740;
 Common.DesktopWidthSize = 1200;
 
 Common.PersonTag = /@\S+/g;
-Common.SearchPlaceholder="Search this jot..."
+Common.SearchPlaceholder="Search..."
 
 Common.APPEND_SECTION = -1;
 
@@ -178,6 +178,11 @@ Common.GoToJots = function(router, isSignedIn)
     router.push({name:'anonymousJots'});
   }  
   
+}
+
+Common.ClearSearch=function(store)
+{
+  store.commit('setSearchText', "");
 }
 
 // Common.GoToAnonymousSection = function(documentId, sectionId, router)

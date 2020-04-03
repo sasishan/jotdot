@@ -16,7 +16,7 @@
       </b-navbar-nav>
       <!-- Right aligned nav items -->
       <b-navbar-nav class="ml-auto">
-      	<Search v-if="signedIn"/>
+      	<Search v-if="signedIn && inJot" />
       	<b-button type="submit" variant="default" v-on:click="signIn" v-if="!signedIn">Sign In</b-button>
         <b-nav-item-dropdown right v-if="signedIn">
           <!-- Using 'button-content' slot -->
@@ -40,6 +40,11 @@ import AuthHelper from '../AuthHelper.vue'
 
 export default {
 	name: 'NavMenu',  
+  	data() { 
+		return {
+	      RoutesForSearch:['jotsById', 'notesbysearch', 'tags', 'sectionsById']
+   		}
+  }, 	
 	props:
 	{
 		signedIn:{}
@@ -49,10 +54,23 @@ export default {
 		isSignedIn()
 		{
 		  return this.$store.state.signedIn;
-		}		
+		},
+		inJot()
+		{
+			var inJot=false;
+			if (this.RoutesForSearch.includes(this.$route.name))
+			{
+				inJot = true;
+			}
+			return inJot;
+		}
 	},
 	methods:
 	{
+		getRoute()
+		{
+			console.info('App currentRoute:', this.$router.currentRoute)
+		},
 	    isMobile() 
 	    {
 	      return Common.isMobile();
